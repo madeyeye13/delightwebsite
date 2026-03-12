@@ -20,22 +20,22 @@
     /* ── Each product snaps into place ───────────────────── */
     .product-item { scroll-snap-align: start; }
 
-    /* ── Action row: hidden on desktop, revealed on hover ── */
+    /* ── Action row: ALWAYS VISIBLE on mobile, hidden on desktop until hover ── */
     .product-actions {
-        opacity: 0;
-        transform: translateY(6px);
+        opacity: 1;
+        transform: translateY(0);
         transition: opacity 0.25s ease, transform 0.25s ease;
-        pointer-events: none;
+        pointer-events: auto;
     }
-    @media (hover: hover) {
-        .product-item:hover .product-actions {
-            opacity: 1;
-            transform: translateY(0);
-            pointer-events: auto;
-        }
-    }
-    @media (hover: none) {
+
+    /* Desktop only: hide actions by default, show on hover */
+    @media (min-width: 768px) {
         .product-actions {
+            opacity: 0;
+            transform: translateY(6px);
+            pointer-events: none;
+        }
+        .product-item:hover .product-actions {
             opacity: 1;
             transform: translateY(0);
             pointer-events: auto;
@@ -84,11 +84,136 @@
 </style>
 
 {{--
+    Define products array before section so it's available in x-data
+--}}
+@php
+$products = [
+    [
+        'image'         => 'images/03.jpg',
+        'name'          => 'French Lace Fabric',
+        'price'         => 28500,
+        'old_price'     => 34000,
+        'unit'          => 'Multiples of 5 yards',
+        'badge'         => 'Sale',
+        'slug'          => 'french-lace-fabric',
+        'category'      => 'Lace Fabrics',
+        'description'   => 'A premium-grade French lace fabric crafted for the modern Nigerian woman.',
+        'sellingMethod' => 'per-length',
+        'stockQuantity' => 8,
+        'minQuantity'   => 1,
+        'quantityStep'  => 1,
+        'variants'      => [
+            ['color' => 'Ivory White',  'hex' => '#F5F0E8'],
+            ['color' => 'Royal Blue',   'hex' => '#2C4A8F'],
+            ['color' => 'Champagne',    'hex' => '#C9A96E'],
+        ],
+    ],
+    [
+        'image'         => 'images/04.jpg',
+        'name'          => 'Premium Aso-oke Set',
+        'price'         => 45000,
+        'old_price'     => null,
+        'unit'          => '2 Sets',
+        'badge'         => 'New',
+        'slug'          => 'premium-aso-oke-set',
+        'category'      => 'Aso-oke',
+        'description'   => 'Handwoven premium Aso-oke set, perfect for traditional occasions.',
+        'sellingMethod' => 'per-set',
+        'stockQuantity' => 15,
+        'minQuantity'   => 1,
+        'quantityStep'  => 1,
+        'variants'      => [],
+    ],
+    [
+        'image'         => 'images/02.jpg',
+        'name'          => 'Ankara Print Fabric',
+        'price'         => 12000,
+        'old_price'     => null,
+        'unit'          => 'Multiples of 5 yards',
+        'badge'         => null,
+        'slug'          => 'ankara-print-fabric',
+        'category'      => 'Ankara',
+        'description'   => 'Bold, vibrant Ankara print fabric for everyday and formal wear.',
+        'sellingMethod' => 'per-length',
+        'stockQuantity' => 22,
+        'minQuantity'   => 1,
+        'quantityStep'  => 1,
+        'variants'      => [],
+    ],
+    [
+        'image'         => 'images/01.jpg',
+        'name'          => 'Swiss Voile Lace',
+        'price'         => 52000,
+        'old_price'     => 60000,
+        'unit'          => 'Multiples of 5 yards',
+        'badge'         => 'Sale',
+        'slug'          => 'swiss-voile-lace',
+        'category'      => 'Lace Fabrics',
+        'description'   => 'Delicate Swiss voile lace with intricate embroidery.',
+        'sellingMethod' => 'per-length',
+        'stockQuantity' => 5,
+        'minQuantity'   => 1,
+        'quantityStep'  => 1,
+        'variants'      => [
+            ['color' => 'White', 'hex' => '#FFFFFF'],
+            ['color' => 'Cream', 'hex' => '#FAF9F6'],
+        ],
+    ],
+    [
+        'image'         => 'images/06.jpg',
+        'name'          => 'Senator Plain Material',
+        'price'         => 8500,
+        'old_price'     => null,
+        'unit'          => '2 Sets',
+        'badge'         => null,
+        'slug'          => 'senator-plain-material',
+        'category'      => 'Senator',
+        'description'   => 'Classic senator plain material for men\'s formal and casual styles.',
+        'sellingMethod' => 'per-set',
+        'stockQuantity' => 30,
+        'minQuantity'   => 1,
+        'quantityStep'  => 1,
+        'variants'      => [],
+    ],
+    [
+        'image'         => 'images/05.jpg',
+        'name'          => 'Bridal Lace Fabric',
+        'price'         => 78000,
+        'old_price'     => null,
+        'unit'          => 'Multiples of 5 yards',
+        'badge'         => 'New',
+        'slug'          => 'bridal-lace-fabric',
+        'category'      => 'Lace Fabrics',
+        'description'   => 'Exquisite bridal lace fabric for the perfect wedding look.',
+        'sellingMethod' => 'per-length',
+        'stockQuantity' => 3,
+        'minQuantity'   => 1,
+        'quantityStep'  => 1,
+        'variants'      => [],
+    ],
+];
+@endphp
+
+{{-- Initialize products data for Alpine --}}
+<script>
+    window.productsData = @json($products);
+</script>
+
+{{--
     NOTE: x-data initializes Alpine on this section so that the Quick View
-    button's @click="$dispatch()" works on both desktop and mobile.
+    button's @click works on both desktop and mobile.
 --}}
 <section
-    x-data
+    x-data="{
+        products: window.productsData,
+        openQuickView(index) {
+            if (this.products[index]) {
+                window.dispatchEvent(new CustomEvent('open-quickview', {
+                    detail: this.products[index]
+                }));
+            }
+        }
+    }"
     class="py-16 md:py-24 bg-white dark:bg-[#0a0c10]"
     aria-labelledby="featured-heading"
 >
@@ -151,129 +276,8 @@
             class="products-scroll flex gap-6 md:gap-8 overflow-x-auto pb-2"
         >
 
-            @php
-            $products = [
-                [
-                    'image'         => 'images/03.jpg',
-                    'name'          => 'French Lace Fabric',
-                    'price'         => 28500,
-                    'old_price'     => 34000,
-                    'unit'          => 'Multiples of 5 yards',
-                    'badge'         => 'Sale',
-                    'slug'          => 'french-lace-fabric',
-                    'category'      => 'Lace Fabrics',
-                    'description'   => 'A premium-grade French lace fabric crafted for the modern Nigerian woman.',
-                    'sellingMethod' => 'per-length',
-                    'stockQuantity' => 8,
-                    'minQuantity'   => 1,
-                    'quantityStep'  => 1,
-                    'variants'      => [
-                        ['color' => 'Ivory White',  'hex' => '#F5F0E8'],
-                        ['color' => 'Royal Blue',   'hex' => '#2C4A8F'],
-                        ['color' => 'Champagne',    'hex' => '#C9A96E'],
-                    ],
-                ],
-                [
-                    'image'         => 'images/04.jpg',
-                    'name'          => 'Premium Aso-oke Set',
-                    'price'         => 45000,
-                    'old_price'     => null,
-                    'unit'          => '2 Sets',
-                    'badge'         => 'New',
-                    'slug'          => 'premium-aso-oke-set',
-                    'category'      => 'Aso-oke',
-                    'description'   => 'Handwoven premium Aso-oke set, perfect for traditional occasions.',
-                    'sellingMethod' => 'per-set',
-                    'stockQuantity' => 15,
-                    'minQuantity'   => 1,
-                    'quantityStep'  => 1,
-                    'variants'      => [],
-                ],
-                [
-                    'image'         => 'images/02.jpg',
-                    'name'          => 'Ankara Print Fabric',
-                    'price'         => 12000,
-                    'old_price'     => null,
-                    'unit'          => 'Multiples of 5 yards',
-                    'badge'         => null,
-                    'slug'          => 'ankara-print-fabric',
-                    'category'      => 'Ankara',
-                    'description'   => 'Bold, vibrant Ankara print fabric for everyday and formal wear.',
-                    'sellingMethod' => 'per-length',
-                    'stockQuantity' => 22,
-                    'minQuantity'   => 1,
-                    'quantityStep'  => 1,
-                    'variants'      => [],
-                ],
-                [
-                    'image'         => 'images/01.jpg',
-                    'name'          => 'Swiss Voile Lace',
-                    'price'         => 52000,
-                    'old_price'     => 60000,
-                    'unit'          => 'Multiples of 5 yards',
-                    'badge'         => 'Sale',
-                    'slug'          => 'swiss-voile-lace',
-                    'category'      => 'Lace Fabrics',
-                    'description'   => 'Delicate Swiss voile lace with intricate embroidery.',
-                    'sellingMethod' => 'per-length',
-                    'stockQuantity' => 5,
-                    'minQuantity'   => 1,
-                    'quantityStep'  => 1,
-                    'variants'      => [
-                        ['color' => 'White', 'hex' => '#FFFFFF'],
-                        ['color' => 'Cream', 'hex' => '#FAF9F6'],
-                    ],
-                ],
-                [
-                    'image'         => 'images/06.jpg',
-                    'name'          => 'Senator Plain Material',
-                    'price'         => 8500,
-                    'old_price'     => null,
-                    'unit'          => '2 Sets',
-                    'badge'         => null,
-                    'slug'          => 'senator-plain-material',
-                    'category'      => 'Senator',
-                    'description'   => 'Classic senator plain material for men\'s formal and casual styles.',
-                    'sellingMethod' => 'per-set',
-                    'stockQuantity' => 30,
-                    'minQuantity'   => 1,
-                    'quantityStep'  => 1,
-                    'variants'      => [],
-                ],
-                [
-                    'image'         => 'images/05.jpg',
-                    'name'          => 'Bridal Lace Fabric',
-                    'price'         => 78000,
-                    'old_price'     => null,
-                    'unit'          => 'Multiples of 5 yards',
-                    'badge'         => 'New',
-                    'slug'          => 'bridal-lace-fabric',
-                    'category'      => 'Lace Fabrics',
-                    'description'   => 'Exquisite bridal lace fabric for the perfect wedding look.',
-                    'sellingMethod' => 'per-length',
-                    'stockQuantity' => 3,
-                    'minQuantity'   => 1,
-                    'quantityStep'  => 1,
-                    'variants'      => [],
-                ],
-            ];
-            @endphp
-
             @foreach($products as $product)
-            @php
-                $variantsJson  = json_encode($product['variants'] ?? []);
-                $oldPriceVal   = $product['old_price'] ? $product['old_price'] : 'null';
-                $pName         = addslashes($product['name']);
-                $pSlug         = $product['slug'];
-                $pCategory     = addslashes($product['category']);
-                $pDesc         = addslashes($product['description']);
-                $pImage        = asset($product['image']);
-                $pUnit         = addslashes($product['unit']);
-                $pMethod       = $product['sellingMethod'];
-                $pStock        = $product['stockQuantity'];
-                $pMinQty       = $product['minQuantity'];
-                $pQtyStep      = $product['quantityStep'];
-            @endphp
+
             <article
                 class="product-item flex-shrink-0 w-[260px] sm:w-[280px] md:w-[300px] group"
                 aria-label="{{ $product['name'] }}"
@@ -327,25 +331,10 @@
                     {{-- ── Actions ──────────────────────────── --}}
                     <div class="product-actions flex items-center justify-between">
 
-                        {{-- Quick View — dispatches to the modal's @open-quickview.window listener --}}
+                        {{-- Quick View — calls section method with product index --}}
                         <button
                             type="button"
-                            @click="$dispatch('open-quickview', {
-                                name:          '{{ $pName }}',
-                                slug:          '{{ $pSlug }}',
-                                category:      '{{ $pCategory }}',
-                                description:   '{{ $pDesc }}',
-                                image:         '{{ $pImage }}',
-                                images:        [],
-                                price:         {{ $product['price'] }},
-                                old_price:     {{ $oldPriceVal }},
-                                unit:          '{{ $pUnit }}',
-                                sellingMethod: '{{ $pMethod }}',
-                                stockQuantity: {{ $pStock }},
-                                minQuantity:   {{ $pMinQty }},
-                                quantityStep:  {{ $pQtyStep }},
-                                variants:      {!! $variantsJson !!}
-                            })"
+                            @click="openQuickView({{ $loop->index }})"
                             class="action-link font-sans text-[11px] font-medium text-gray-700 dark:text-white/60
                                    hover:text-black dark:hover:text-white transition-colors duration-150
                                    bg-transparent border-none cursor-pointer pb-0.5"
