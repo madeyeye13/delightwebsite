@@ -563,11 +563,37 @@
     {{-- Drawer header --}}
     <div class="flex items-center justify-between px-5 py-5 border-b border-gray-100">
         <img src="{{ asset('images/logo1.png') }}" alt="1st Delightsome Fabrics" class="h-9 w-auto">
-        <button @click="mobileOpen = false" class="text-gray-500 hover:text-black transition-colors bg-transparent border-none cursor-pointer" aria-label="Close menu">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5">
-                <path d="M18.462 6.479 5.538 19.402M5.538 6.479l12.924 12.923" stroke="currentColor" stroke-width="1.2"/>
-            </svg>
-        </button>
+        <div class="flex items-center gap-3">
+            {{-- Dark mode toggle --}}
+            <button
+                @click="
+                    $store.theme.toggle();
+                    document.documentElement.classList.toggle('dark', $store.theme.dark);
+                    localStorage.setItem('theme', $store.theme.dark ? 'dark' : 'light');
+                "
+                class="text-gray-500 hover:text-black transition-colors bg-transparent border-none cursor-pointer"
+                :aria-label="$store.theme.dark ? 'Light mode' : 'Dark mode'"
+            >
+                {{-- Sun icon (shown in dark mode) --}}
+                <svg x-show="$store.theme.dark" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <circle cx="12" cy="12" r="5"/>
+                    <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                    <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+                {{-- Moon icon (shown in light mode) --}}
+                <svg x-show="!$store.theme.dark" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+            </button>
+            {{-- Close button --}}
+            <button @click="mobileOpen = false" class="text-gray-500 hover:text-black transition-colors bg-transparent border-none cursor-pointer" aria-label="Close menu">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5">
+                    <path d="M18.462 6.479 5.538 19.402M5.538 6.479l12.924 12.923" stroke="currentColor" stroke-width="1.2"/>
+                </svg>
+            </button>
+        </div>
     </div>
 
     {{-- Nav links --}}

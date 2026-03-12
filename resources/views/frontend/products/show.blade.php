@@ -19,6 +19,23 @@
 
 @section('content')
 
+{{-- Initialize Alpine stores --}}
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.store('theme', {
+            dark: localStorage.getItem('theme') === 'dark'
+                || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches),
+            toggle() { this.dark = !this.dark; }
+        });
+    });
+    (function() {
+        const saved = localStorage.getItem('theme');
+        if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+    })();
+</script>
+
 @php
 
 // ── MOCK DATA ─────────────────────────────────────────────────────────────────
