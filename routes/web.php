@@ -7,6 +7,11 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+Route::get('/preview/product', function () {
+    // $product is null here — the Blade view falls back to its internal @php mock data
+    return view('frontend.products.show', ['product' => null]);
+})->name('preview.product');
+
 Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
@@ -28,6 +33,14 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         return view('admin.products.index');
     })->name('products.index');
 
+    Route::get('/products/create', function () {
+        return view('admin.products.form');
+    })->name('products.create');
+
+    Route::get('/products/{id}/edit', function ($id) {
+        return view('admin.products.form');
+    })->name('products.edit');
+
     // Users
     Route::get('/users', function () {
         return view('admin.users.index');
@@ -39,7 +52,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     })->name('settings');
 
 });
-
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
