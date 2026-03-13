@@ -26,6 +26,7 @@
     x-data="{
         scrolled: false,
         hovered: false,
+        alwaysShowBg: document.documentElement.getAttribute('data-header-bg') === '1',
         searchOpen: false,
         searchQuery: '',
         mobileOpen: false,
@@ -34,7 +35,7 @@
         collectionOpen: false,
         selectedCurrency: 'NGN',
         windowWidth: window.innerWidth,
-        get bg() { return this.scrolled || this.hovered; },
+        get bg() { return this.alwaysShowBg || this.scrolled || this.hovered; },
         get gridColumns() {
             return this.windowWidth < 1024 ? 'auto 1fr auto' : '180px 1fr 220px';
         },
@@ -50,10 +51,15 @@
             window.addEventListener('resize', () => {
                 this.windowWidth = window.innerWidth;
             });
-            /* Lock body scroll when drawers are open */
             this.$watch('mobileOpen',  v => document.body.style.overflow = v ? 'hidden' : '');
             this.$watch('profileOpen', v => document.body.style.overflow = v ? 'hidden' : '');
             this.$watch('searchOpen',  v => document.body.style.overflow = v ? 'hidden' : '');
+
+            // Sync cart panel body lock with header watchers
+            this.$watch(
+                () => Alpine.store('cart') ? Alpine.store('cart').open : false,
+                v => { document.body.style.overflow = v ? 'hidden' : ''; }
+            );
         }
     }"
     x-init="init()"
@@ -123,6 +129,10 @@
      • Transparent by default; white bg fades in on hover OR scroll
      • 3-column grid: Logo | Nav | Actions
 ════════════════════════════════════════════════════════════════ --}}
+@php
+    $alwaysShowHeaderBg = $alwaysShowHeaderBg ?? false;
+@endphp
+
 <header
     @mouseenter="hovered = true"
     @mouseleave="hovered = false"
@@ -430,7 +440,7 @@
                 </button>
 
                 {{-- ── CART ── --}}
-                <a href="{{ url('/cart') }}"
+                <button @click="window.dispatchEvent(new CustomEvent('cart:open'))"
                    :class="bg ? 'text-gray-700 hover:text-black' : 'text-white hover:text-white/80'"
                    class="relative transition-colors duration-200 hover:opacity-70"
                    aria-label="Cart"
@@ -446,7 +456,7 @@
                           :class="bg ? 'ring-white' : 'ring-transparent'">
                         0
                     </span>
-                </a>
+                </button>
 
                 {{-- ── HAMBURGER (mobile only) ── --}}
                 <button

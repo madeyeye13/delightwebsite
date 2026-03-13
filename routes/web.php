@@ -12,6 +12,11 @@ Route::get('/preview/product', function () {
     return view('frontend.products.show', ['product' => null]);
 })->name('preview.product');
 
+
+Route::get('/cart', function () {
+    return view('frontend.cart.index');
+})->name('cart.index');
+
 Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
