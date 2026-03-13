@@ -314,12 +314,12 @@ $products = [
                     </h3>
 
                     <div class="flex items-baseline gap-2 mb-1">
-                        <span class="font-sans text-[13px] font-semibold text-gray-900 dark:text-white">
-                            &#8358;{{ number_format($product['price']) }}
+                        <span class="font-sans text-[13px] font-semibold text-gray-900 dark:text-white"
+                              x-text="$store.currency ? $store.currency.format({{ (int)$product['price'] }}) : '₦{{ number_format($product['price']) }}'">
                         </span>
                         @if($product['old_price'])
-                        <span class="font-sans text-[11px] text-gray-400 dark:text-white/30 line-through">
-                            &#8358;{{ number_format($product['old_price']) }}
+                        <span class="font-sans text-[11px] text-gray-400 dark:text-white/30 line-through"
+                              x-text="$store.currency ? $store.currency.format({{ (int)$product['old_price'] }}) : '₦{{ number_format($product['old_price']) }}'">
                         </span>
                         @endif
                     </div>

@@ -140,6 +140,23 @@
                   class="text-[13px] font-medium whitespace-nowrap" style="display:none">Products</span>
         </a>
 
+        {{-- Media Library --}}
+        <a href="{{ route('admin.media.index') }}" title="Media"
+           class="nav-item group flex items-center gap-3 px-2 py-2 rounded-lg transition-all duration-150
+                  {{ request()->routeIs('admin.media.*') ? 'bg-emerald-500/10 text-emerald-400' : 'text-white/50 hover:text-white hover:bg-white/[0.05]' }}">
+            <span class="flex items-center justify-center w-5 h-5 shrink-0">
+                <svg class="w-[15px] h-[15px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                </svg>
+            </span>
+            <span x-show="$store.sidebar.open"
+                  x-transition:enter="transition ease-out duration-150 delay-75" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                  x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+                  class="text-[13px] font-medium whitespace-nowrap" style="display:none">Media</span>
+        </a>
+
         {{-- Users --}}
         <a href="{{ route('admin.users.index') }}" title="Users"
            class="nav-item group flex items-center gap-3 px-2 py-2 rounded-lg transition-all duration-150

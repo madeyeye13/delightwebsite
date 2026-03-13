@@ -50,7 +50,7 @@
 <div class="bg-[#FCFCF9] dark:bg-ink min-h-screen pt-40">
 
     {{-- ── BREADCRUMB ─────────────────────────────────────────────────────────── --}}
-    <nav class="mborder-b border-neutral-100 dark:border-neutral-800 bg-white dark:bg-ink" aria-label="Breadcrumb">
+    <nav class="mborder-b border-neutral-100 dark:border-neutral-800 bg-[#fcfcf9] dark:bg-ink" aria-label="Breadcrumb">
         <div class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-16 py-3 flex items-center gap-2 flex-wrap">
             <a href="{{ url('/') }}"
                class="font-sans text-xs text-neutral-400 dark:text-neutral-500 hover:text-brand transition-colors">Home</a>
@@ -60,7 +60,7 @@
     </nav>
 
     {{-- ── PAGE TITLE BAR ──────────────────────────────────────────────────────── --}}
-    <div class="border-b border-neutral-100 dark:border-neutral-800 bg-white dark:bg-ink">
+    <div class="border-b border-neutral-100 dark:border-neutral-800 bg-[#fcfcf9] dark:bg-ink">
         <div class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-16 py-5 flex items-center justify-between gap-4">
             <div>
                 <h1 class="font-display text-2xl font-bold text-neutral-900 dark:text-white tracking-tight leading-tight">Shopping Cart</h1>

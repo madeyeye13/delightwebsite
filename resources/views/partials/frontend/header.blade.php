@@ -33,15 +33,23 @@
         profileOpen: false,
         shopOpen: false,
         collectionOpen: false,
-        selectedCurrency: 'NGN',
         windowWidth: window.innerWidth,
         get bg() { return this.alwaysShowBg || this.scrolled || this.hovered; },
         get gridColumns() {
             return this.windowWidth < 1024 ? 'auto 1fr auto' : '180px 1fr 220px';
         },
+        // selectedCurrency reads from the shared store so all components stay in sync.
+        // The header UI (@click, :class) uses selectedCurrency exactly as before —
+        // no HTML changes needed anywhere in the header.
+        get selectedCurrency() {
+            return Alpine.store('currency') ? Alpine.store('currency').active : 'NGN';
+        },
 
         changeCurrency(code) {
-            this.selectedCurrency = code;
+            // Write to the shared store — every component on the page reacts instantly.
+            if (Alpine.store('currency')) {
+                Alpine.store('currency').active = code;
+            }
         },
 
         init() {
@@ -51,15 +59,10 @@
             window.addEventListener('resize', () => {
                 this.windowWidth = window.innerWidth;
             });
+            /* Lock body scroll when drawers are open */
             this.$watch('mobileOpen',  v => document.body.style.overflow = v ? 'hidden' : '');
             this.$watch('profileOpen', v => document.body.style.overflow = v ? 'hidden' : '');
             this.$watch('searchOpen',  v => document.body.style.overflow = v ? 'hidden' : '');
-
-            // Sync cart panel body lock with header watchers
-            this.$watch(
-                () => Alpine.store('cart') ? Alpine.store('cart').open : false,
-                v => { document.body.style.overflow = v ? 'hidden' : ''; }
-            );
         }
     }"
     x-init="init()"

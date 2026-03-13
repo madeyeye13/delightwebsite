@@ -157,6 +157,8 @@
             {{-- Header --}}
             @include('partials.admin.header')
 
+            @include('admin.partials.media-picker')
+
             {{-- Page content --}}
             <main class="admin-content flex-1 overflow-y-auto transition-colors duration-200">
                 <div class="page-enter p-5 lg:p-7 max-w-[1600px] mx-auto">

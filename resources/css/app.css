@@ -19,20 +19,20 @@
 }
 
 ::-webkit-scrollbar-track {
-    background: #f5f5f5;
+    background: #E6F3F2; /* brand-50 */
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #888;
+    background: #195A55; /* brand-600 */
     border-radius: 5px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #555;
+    background: #134643; /* brand-700 */
 }
 
 /* Firefox */
 * {
     scrollbar-width: thin;
-    scrollbar-color: #888 #f5f5f5;
+    scrollbar-color: #195A55 #E6F3F2; /* brand-600 on brand-50 */
 }

@@ -8,9 +8,12 @@
     "require": {
         "php": "^8.2",
         "guzzlehttp/guzzle": "^7.10",
+        "intervention/image": "^3.11",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
-        "livewire/livewire": "^4.2"
+        "livewire/livewire": "^4.2",
+        "spatie/laravel-medialibrary": "^11.21",
+        "spatie/laravel-sitemap": "^8.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

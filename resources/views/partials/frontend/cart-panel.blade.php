@@ -16,6 +16,89 @@
 <script>
 document.addEventListener('alpine:init', () => {
 
+    // ══════════════════════════════════════════════════════════════════════
+    // CURRENCY STORE
+    // Single source of truth for currency across every component on the page.
+    //
+    // Architecture:
+    //   • active    — the currently selected currency code (e.g. 'USD')
+    //   • rates     — NGN is always base (1.0). All rates are NGN → foreign.
+    //                 Hardcoded now. When backend is ready:
+    //                   Alpine.store('currency').rates = apiResponse.rates;
+    //                   Alpine.store('currency').markup = userMarkup; // e.g. 1.5 = 50% markup
+    //                 Nothing else needs to change.
+    //   • markup    — multiplier applied ON TOP of the conversion rate.
+    //                 Default 1.0 (no markup). Backend sets this per-currency later.
+    //                 e.g. if rate is 0.00065 USD/NGN and markup is 1.5:
+    //                      $10 NGN × 0.00065 × 1.5 = $0.00975 USD shown to buyer.
+    //   • symbols   — display symbol for each currency code.
+    //   • convert() — converts a raw NGN amount using rate × markup.
+    //   • format()  — convert + format with symbol + locale string.
+    //                 This is the ONLY function price displays should call.
+    // ══════════════════════════════════════════════════════════════════════
+    Alpine.store('currency', {
+
+        active: 'NGN',
+
+        // ── Hardcoded rates (NGN as base = 1) ────────────────────────────
+        // BACKEND SWAP: replace this object with your API/DB response.
+        // Shape must stay: { CODE: Number } where Number = how many CODE per 1 NGN.
+        // e.g. 1 NGN = 0.00065 USD  →  USD: 0.00065
+        rates: {
+            NGN: 1,
+            USD: 0.00065,   // ≈ ₦1,538/USD
+            GBP: 0.00051,   // ≈ ₦1,960/GBP
+            CAD: 0.00088,   // ≈ ₦1,136/CAD
+            EUR: 0.00060,   // ≈ ₦1,666/EUR
+            GHS: 0.0097,    // ≈ ₦103/GHS
+            CFA: 0.393,     // FCFA (West African franc, XOF/XAF) ≈ ₦2.55/CFA
+        },
+
+        // ── Markup multiplier (1.0 = no markup) ──────────────────────────
+        // BACKEND SWAP: set this from your DB markup config per currency.
+        // e.g.  Alpine.store('currency').markup = { USD: 1.5, GBP: 1.4, ... }
+        // For now it's a flat scalar — when you're ready for per-currency
+        // markup just change markup to an object and update convert() below.
+        markup: 1.0,
+
+        // ── Currency symbols ──────────────────────────────────────────────
+        symbols: {
+            NGN: '₦',
+            USD: '$',
+            GBP: '£',
+            CAD: 'CA$',
+            EUR: '€',
+            GHS: 'GH₵',
+            CFA: 'CFA',
+        },
+
+        // ── convert: raw NGN amount → converted amount (Number) ───────────
+        // BACKEND MARKUP UPGRADE: when markup becomes per-currency, change to:
+        //   var m = (typeof this.markup === 'object') ? (this.markup[this.active] || 1) : this.markup;
+        convert: function(ngnAmount) {
+            var rate = this.rates[this.active] || 1;
+            return ngnAmount * rate * this.markup;
+        },
+
+        // ── symbol: current currency symbol ──────────────────────────────
+        get symbol() {
+            return this.symbols[this.active] || this.active;
+        },
+
+        // ── format: the ONE function all price displays call ──────────────
+        // Returns e.g. "₦28,500" or "$18.52" or "CFA 11,205"
+        // Locale formatting: NGN uses no decimal, foreign uses 2 decimal places.
+        format: function(ngnAmount) {
+            var converted = this.convert(ngnAmount);
+            var sym = this.symbol;
+            if (this.active === 'NGN') {
+                return sym + Math.round(converted).toLocaleString();
+            }
+            // Foreign currencies: show 2 decimal places
+            return sym + converted.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        },
+    });
+
     Alpine.store('cart', {
 
         open: false,
@@ -410,7 +493,7 @@ document.addEventListener('alpine:init', () => {
                                     </div>
                                 </div>
                                 <p class="font-display text-sm font-semibold text-neutral-900 dark:text-white">
-                                    &#8358;<span x-text="$store.cart.lineTotal(item).toLocaleString()"></span>
+                                    <span x-text="$store.currency.format($store.cart.lineTotal(item))"></span>
                                 </p>
                             </div>
 
@@ -475,7 +558,7 @@ document.addEventListener('alpine:init', () => {
                                 </button>
                             </div>
                             <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">
-                                &#8358;<span x-text="item.unit_price.toLocaleString()"></span> / <span x-text="item.unit_label || 'unit'"></span>
+                                <span x-text="$store.currency.format(item.unit_price)"></span> / <span x-text="item.unit_label || 'unit'"></span>
                             </span>
                         </div>
 
@@ -527,7 +610,7 @@ document.addEventListener('alpine:init', () => {
                                                 </span>
                                             </template>
                                             <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">
-                                                &#8358;<span x-text="ao.unit_price.toLocaleString()"></span> / <span x-text="ao.unit_label || 'unit'"></span>
+                                                <span x-text="$store.currency.format(ao.unit_price)"></span> / <span x-text="ao.unit_label || 'unit'"></span>
                                             </span>
                                         </div>
 
@@ -545,7 +628,7 @@ document.addEventListener('alpine:init', () => {
                                                 </button>
                                             </div>
                                             <span class="font-display text-xs font-semibold text-neutral-800 dark:text-white">
-                                                +&#8358;<span x-text="(ao.unit_price * ao.quantity).toLocaleString()"></span>
+                                                <span x-text="$store.currency.format(ao.unit_price * ao.quantity)"></span>
                                             </span>
                                         </div>
                                     </div>
@@ -581,7 +664,7 @@ document.addEventListener('alpine:init', () => {
                                             <p class="font-display text-2xs font-semibold text-neutral-800 dark:text-white line-clamp-1" x-text="suggestion.name"></p>
                                             <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500" x-text="suggestion.category"></p>
                                             <div class="flex items-center gap-1 mt-0.5 flex-wrap">
-                                                <span class="font-sans text-2xs font-semibold text-neutral-700 dark:text-neutral-300">&#8358;<span x-text="suggestion.unit_price.toLocaleString()"></span></span>
+                                                <span class="font-sans text-2xs font-semibold text-neutral-700 dark:text-neutral-300"><span x-text="$store.currency.format(suggestion.unit_price)"></span></span>
                                                 <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">/ <span x-text="suggestion.unit_label || 'unit'"></span></span>
                                                 <template x-if="suggestion.selling_method === 'per-length'">
                                                     <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">&middot; <span x-text="suggestion.units_per_order + ' ' + suggestion.length_unit"></span></span>
@@ -619,15 +702,15 @@ document.addEventListener('alpine:init', () => {
             <div class="px-5 py-4 space-y-2.5">
                 <div class="flex items-center justify-between">
                     <span class="font-sans text-xs text-neutral-500 dark:text-neutral-400">Items (<span x-text="$store.cart.item_count"></span>)</span>
-                    <span class="font-sans text-xs font-medium text-neutral-700 dark:text-neutral-300">&#8358;<span x-text="$store.cart.items_subtotal.toLocaleString()"></span></span>
+                    <span class="font-sans text-xs font-medium text-neutral-700 dark:text-neutral-300"><span x-text="$store.currency.format($store.cart.items_subtotal)"></span></span>
                 </div>
                 <div x-show="$store.cart.add_ons_total > 0" class="flex items-center justify-between">
                     <span class="font-sans text-xs text-neutral-500 dark:text-neutral-400">Add-ons</span>
-                    <span class="font-sans text-xs font-medium text-neutral-700 dark:text-neutral-300">+&#8358;<span x-text="$store.cart.add_ons_total.toLocaleString()"></span></span>
+                    <span class="font-sans text-xs font-medium text-neutral-700 dark:text-neutral-300"><span x-text="$store.currency.format($store.cart.add_ons_total)"></span></span>
                 </div>
                 <div class="border-t border-neutral-100 dark:border-neutral-800 pt-2.5 flex items-center justify-between">
                     <span class="font-sans text-xs font-semibold text-neutral-900 dark:text-white uppercase tracking-wide">Total</span>
-                    <span class="font-display text-md font-bold text-neutral-900 dark:text-white">&#8358;<span x-text="$store.cart.cart_total.toLocaleString()"></span></span>
+                    <span class="font-display text-md font-bold text-neutral-900 dark:text-white"><span x-text="$store.currency.format($store.cart.cart_total)"></span></span>
                 </div>
                 <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">Shipping calculated at checkout</p>
             </div>

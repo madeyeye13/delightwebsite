@@ -75,24 +75,28 @@ $mock = [
     'stockQuantity' => 8,
     'images'        => [],  // ← BACKEND: $product->images — fallback when no variants
     'variants'  => [
-        ['color' => 'Ivory White',  'hex' => '#F5F0E8', 'images' => ['images/products/lace-ivory-1.jpg','images/products/lace-ivory-2.jpg','images/products/lace-ivory-3.jpg']],
-        ['color' => 'Royal Blue',   'hex' => '#2C4A8F', 'images' => ['images/products/lace-blue-1.jpg','images/products/lace-blue-2.jpg']],
-        ['color' => 'Champagne',    'hex' => '#C9A96E', 'images' => ['images/products/lace-champ-1.jpg','images/products/lace-champ-2.jpg']],
-        ['color' => 'Forest Green', 'hex' => '#1F6F67', 'images' => ['images/products/lace-green-1.jpg']],
+        // id: your variant primary key (variant_id in DB). Used in cartPayload so backend
+        // can resolve the exact variant record without a slug+color double-lookup.
+        ['id' => 101, 'color' => 'Ivory White',  'hex' => '#F5F0E8', 'images' => ['images/products/lace-ivory-1.jpg','images/products/lace-ivory-2.jpg','images/products/lace-ivory-3.jpg']],
+        ['id' => 102, 'color' => 'Royal Blue',   'hex' => '#2C4A8F', 'images' => ['images/products/lace-blue-1.jpg','images/products/lace-blue-2.jpg']],
+        ['id' => 103, 'color' => 'Champagne',    'hex' => '#C9A96E', 'images' => ['images/products/lace-champ-1.jpg','images/products/lace-champ-2.jpg']],
+        ['id' => 104, 'color' => 'Forest Green', 'hex' => '#1F6F67', 'images' => ['images/products/lace-green-1.jpg']],
     ],
-    // addOns: related products from your catalog, NOT service charges.
-    // Each entry mirrors your product architecture so they can be added
-    // as independent cart line items (not merged into the main product price).
+    // addOns: real catalog products — each becomes its own independent cart line.
+    // Shape mirrors your product architecture so the cart panel/page can render them correctly.
     'addOns' => [
         [
             'id'            => 1,
             'slug'          => 'matching-headtie',
             'name'          => 'Matching Headtie',
             'image'         => 'images/products/headtie.jpg',
-            'price'         => 8000,
+            'price'         => 8500,
             'category'      => 'Headties',
             'sellingMethod' => 'per-piece',
             'unitLabel'     => 'piece',
+            'lengthUnit'    => null,
+            'unitsPerOrder' => null,
+            'loomSize'      => null,
             'stockQuantity' => 12,
             'minQuantity'   => 1,
             'quantityStep'  => 1,
@@ -106,6 +110,9 @@ $mock = [
             'category'      => 'Accessories',
             'sellingMethod' => 'per-piece',
             'unitLabel'     => 'piece',
+            'lengthUnit'    => null,
+            'unitsPerOrder' => null,
+            'loomSize'      => null,
             'stockQuantity' => 8,
             'minQuantity'   => 1,
             'quantityStep'  => 1,
@@ -119,6 +126,9 @@ $mock = [
             'category'      => 'Linings',
             'sellingMethod' => 'per-length',
             'unitLabel'     => 'yards',
+            'lengthUnit'    => 'yards',
+            'unitsPerOrder' => 3,
+            'loomSize'      => null,
             'stockQuantity' => 20,
             'minQuantity'   => 1,
             'quantityStep'  => 1,
@@ -202,46 +212,38 @@ $hasExcludes     = !empty($p['excludesText']);
 ══════════════════════════════════════════════════════════════════════════════ --}}
 <script>
 window.__pdp = {
-    // ── Product identity ─────────────────────────────────────────────────────
+    // ── Identity ──────────────────────────────────────────────────────────
     slug:           "{{ e($p['slug']) }}",
     name:           "{{ e($p['name']) }}",
     category:       "{{ e($p['category']) }}",
-
-    // ── Selling architecture ──────────────────────────────────────────────────
-    // sellingMethod: per-length | per-piece | per-set | per-bundle | per-loom
+    // ── Selling architecture ──────────────────────────────────────────────
     sellingMethod:  "{{ e($p['sellingMethod']) }}",
     unitLabel:      "{{ e($p['unitLabel']) }}",
     lengthUnit:     "{{ e($p['lengthUnit']) }}",
     unitsPerOrder:  {{ (int) $p['unitsPerOrder'] }},
-    loomSize:       {{ $p['loomSize'] ? '"' . e($p['loomSize']) . '"' : 'null' }},
-
-    // ── Quantity rules ────────────────────────────────────────────────────────
+    loomSize:       {{ !empty($p['loomSize']) ? '"' . e($p['loomSize']) . '"' : 'null' }},
+    // ── Quantity rules ────────────────────────────────────────────────────
     minQty:         {{ (int) $p['minQuantity'] }},
     qtyStep:        {{ (int) $p['quantityStep'] }},
     // stockQty: orderable unit count. Per-length = unit-blocks (e.g. 8 × 5yds = 40yds).
-    // Per-piece/set/bundle/loom = actual item count.
+    // Per-piece/set/bundle/loom = actual sellable item count.
     stockQty:       {{ $stock }},
-
-    // ── Pricing ───────────────────────────────────────────────────────────────
+    // ── Pricing ───────────────────────────────────────────────────────────
     basePrice:      {{ $finalPriceInt }},
-
-    // ── Gallery ───────────────────────────────────────────────────────────────
+    // ── Gallery ───────────────────────────────────────────────────────────
     variants:       {!! json_encode(array_values((array) $p['variants'])) !!},
     images:         {!! json_encode(array_values((array) $p['images'])) !!},
-
-    // ── Related catalog products (NOT service charges) ────────────────────────
-    // Each entry is a full product record from your catalog.
-    // When selected, each becomes its own cart line item.
+    // ── Related catalog products (each becomes its own cart line) ─────────
     addOns:         {!! json_encode(array_values((array) $p['addOns'])) !!},
 };
 </script>
 <div
     x-data="productDetail()"
-    class="bg-[#FCFCF9] dark:bg-ink min-h-screen pt-40"
+    class="bg-[#fcfcf9] dark:bg-ink min-h-screen pt-40"
 >
 
 {{-- BREADCRUMB ──────────────────────────────────────────────────────────── --}}
-<nav class="border-b border-neutral-100 dark:border-neutral-800 bg-[#FCFCF9] dark:bg-ink" aria-label="Breadcrumb">
+<nav class="border-b border-neutral-100 dark:border-neutral-800 bg-[#fcfcf9] dark:bg-ink" aria-label="Breadcrumb">
     <div class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-16 py-3 flex items-center gap-2 flex-wrap">
         <a href="{{ url('/') }}" class="font-sans text-xs text-neutral-400 dark:text-neutral-500 hover:text-brand transition-colors">Home</a>
         <svg class="w-3 h-3 text-neutral-300 dark:text-neutral-700 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="9 18 15 12 9 6"/></svg>
@@ -353,20 +355,21 @@ window.__pdp = {
 
             {{-- Price — driven by Alpine grandTotal --}}
             <div class="flex items-end gap-3 flex-wrap">
-                <span class="font-display text-3xl font-extrabold text-neutral-900 dark:text-white leading-none tracking-tighter">
-                    &#8358;<span x-text="grandTotal.toLocaleString()"></span>
+                <span class="font-display text-3xl font-extrabold text-neutral-900 dark:text-white leading-none tracking-tighter"
+                      x-text="$store.currency ? $store.currency.format(grandTotal) : '₦' + grandTotal.toLocaleString()">
                 </span>
                 @if($hasComparePrice)
-                <span class="font-sans text-base text-neutral-400 dark:text-neutral-500 line-through leading-none">
-                    &#8358;{{ number_format($p['comparePrice']) }}
+                <span class="font-sans text-base text-neutral-400 dark:text-neutral-500 line-through leading-none"
+                      x-text="$store.currency ? $store.currency.format({{ (int)$p['comparePrice'] }}) : '₦{{ number_format($p['comparePrice']) }}'">
                 </span>
                 @endif
                 @if($hasDiscount)
                 <span class="font-sans text-xs font-semibold text-brand dark:text-brand-300 bg-brand-50 dark:bg-brand-900/30 px-2 py-0.5">
-                    @if($p['discountType'] === 'percent')&minus;{{ $p['discountValue'] }}%@else&minus;&#8358;{{ number_format($p['discountValue']) }}@endif
+                    @if($p['discountType'] === 'percent')&minus;{{ $p['discountValue'] }}%@else<span x-text="$store.currency ? '&minus;' + $store.currency.format({{ (int)$p['discountValue'] }}) : '&minus;₦{{ number_format($p['discountValue']) }}'"></span>@endif
                 </span>
                 @endif
-                {{-- Add-ons are separate catalog products / cart lines — not merged into main price --}}
+                {{-- Related items are separate cart lines — never merged into this price --}}
+                <span x-show="selectedAddOns.length > 0" class="font-sans text-xs text-neutral-400 dark:text-neutral-500">+ <span x-text="selectedAddOns.length"></span> related item(s) added separately</span>
             </div>
 
             {{-- Short description --}}
@@ -554,7 +557,8 @@ window.__pdp = {
                             <div class="w-px h-7 bg-brand-200 dark:bg-brand-700 flex-shrink-0"></div>
                             <div class="text-right">
                                 <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider">Total Price</p>
-                                <p class="font-display text-sm font-bold text-brand-700 dark:text-brand-200">&#8358;<span x-text="grandTotal.toLocaleString()"></span></p>
+                                <p class="font-display text-sm font-bold text-brand-700 dark:text-brand-200"
+                                   x-text="$store.currency ? $store.currency.format(grandTotal) : '₦' + grandTotal.toLocaleString()"></p>
                             </div>
                         </div>
                     </div>
@@ -566,7 +570,8 @@ window.__pdp = {
                         <span class="font-semibold text-neutral-800 dark:text-white" x-text="qty"></span> &times; {{ $p['unitLabel'] ?: 'unit' }}
                     </span>
                     <span class="font-sans text-xs text-neutral-500 dark:text-neutral-400">
-                        Total: <span class="font-semibold text-neutral-800 dark:text-white">&#8358;<span x-text="grandTotal.toLocaleString()"></span></span>
+                        Total: <span class="font-semibold text-neutral-800 dark:text-white"
+                                     x-text="$store.currency ? $store.currency.format(grandTotal) : '₦' + grandTotal.toLocaleString()"></span>
                     </span>
                 </div>
                 @endif
@@ -579,6 +584,16 @@ window.__pdp = {
                 <p class="font-sans text-xs font-semibold tracking-wider uppercase text-neutral-500 dark:text-neutral-400">Complete the Look</p>
                 <div class="space-y-2">
                     @foreach((array) $p['addOns'] as $addon)
+                    @php
+                        // Build a concise selling context string from the add-on's own architecture
+                        if ($addon['sellingMethod'] === 'per-length' && !empty($addon['unitsPerOrder']) && !empty($addon['lengthUnit'])) {
+                            $addonContext = 'Per ' . $addon['unitsPerOrder'] . ' ' . $addon['lengthUnit'];
+                        } elseif ($addon['sellingMethod'] === 'per-loom' && !empty($addon['loomSize'])) {
+                            $addonContext = 'Per loom · ' . $addon['loomSize'];
+                        } else {
+                            $addonContext = 'Per ' . ($addon['unitLabel'] ?: Str::after($addon['sellingMethod'], 'per-'));
+                        }
+                    @endphp
                     <div
                         @click="toggleAddOn({{ $addon['id'] }})"
                         :class="isAddOnSelected({{ $addon['id'] }})
@@ -594,8 +609,8 @@ window.__pdp = {
                         <div class="flex-1 min-w-0">
                             <p class="font-sans text-xs font-medium text-neutral-800 dark:text-white truncate">{{ $addon['name'] }}</p>
                             <p class="font-sans text-xs text-neutral-500 dark:text-neutral-400">
-                                &#8358;{{ number_format($addon['price']) }}
-                                @if(!empty($addon['unitLabel'])) <span class="text-neutral-400 dark:text-neutral-600">&middot; per {{ $addon['unitLabel'] }}</span>@endif
+                                <span x-text="$store.currency ? $store.currency.format({{ (int)$addon['price'] }}) : '₦{{ number_format($addon['price']) }}'"></span>
+                                <span class="text-neutral-400 dark:text-neutral-600">&middot; {{ $addonContext }}</span>
                             </p>
                         </div>
                         <div :class="isAddOnSelected({{ $addon['id'] }}) ? 'bg-brand border-brand' : 'bg-white dark:bg-neutral-900 border-neutral-300 dark:border-neutral-600'"
@@ -605,13 +620,14 @@ window.__pdp = {
                     </div>
                     @endforeach
                 </div>
+                {{-- Informational only — these are separate cart lines, not added to main price --}}
                 <p x-show="selectedAddOns.length > 0" class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">
                     <span x-text="selectedAddOns.length"></span> item(s) will be added as separate cart lines
                 </p>
             </div>
             @endif
 
-            {{-- ── Selected related products — each becomes its own cart line ── --}}
+            {{-- ── Also Adding — separate cart lines, not merged into main price ── --}}
             <div x-show="selectedAddOns.length > 0"
                  class="border border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/40 p-3 space-y-1.5">
                 <p class="font-sans text-2xs font-semibold tracking-wider uppercase text-neutral-400 dark:text-neutral-500">Also Adding to Cart</p>
@@ -619,13 +635,14 @@ window.__pdp = {
                     <div class="flex items-center justify-between gap-2">
                         <div class="flex items-center gap-1.5">
                             <span class="w-1 h-1 rounded-full bg-brand flex-shrink-0"></span>
-                            <div>
+                            <div class="min-w-0">
                                 <span class="font-sans text-xs text-neutral-700 dark:text-neutral-300" x-text="ao.name"></span>
                                 <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 ml-1" x-text="ao.unitLabel ? '· per ' + ao.unitLabel : ''"></span>
                             </div>
                         </div>
                         <div class="flex items-center gap-2">
-                            <span class="font-sans text-xs font-medium text-neutral-700 dark:text-neutral-300">&#8358;<span x-text="ao.price.toLocaleString()"></span></span>
+                            <span class="font-sans text-xs font-medium text-neutral-700 dark:text-neutral-300"
+                                  x-text="$store.currency ? $store.currency.format(ao.price) : '₦' + ao.price.toLocaleString()"></span>
                             <button @click="toggleAddOn(ao.id)"
                                     class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
                                     aria-label="Remove">
@@ -634,9 +651,12 @@ window.__pdp = {
                         </div>
                     </div>
                 </template>
-                <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 pt-1 border-t border-neutral-100 dark:border-neutral-800">
-                    Each item above will be a separate line in your cart
-                </p>
+                <div class="flex items-center justify-between pt-1 border-t border-neutral-100 dark:border-neutral-800">
+                    <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">Selected related items total</span>
+                    <span class="font-sans text-xs font-semibold text-neutral-800 dark:text-white"
+                          x-text="$store.currency ? $store.currency.format(addOnTotal) : '₦' + addOnTotal.toLocaleString()"></span>
+                </div>
+                <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">Each item above is added as a separate cart line</p>
             </div>
 
             {{-- CTA buttons --}}
@@ -764,6 +784,15 @@ window.__pdp = {
                 <p class="font-sans text-sm text-neutral-500 dark:text-neutral-400 mb-8">Frequently paired with <span class="text-neutral-800 dark:text-white font-medium">{{ $p['name'] }}</span></p>
                 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
                     @foreach((array) $p['addOns'] as $addon)
+                    @php
+                        if ($addon['sellingMethod'] === 'per-length' && !empty($addon['unitsPerOrder']) && !empty($addon['lengthUnit'])) {
+                            $addonCtx = 'Per ' . $addon['unitsPerOrder'] . ' ' . $addon['lengthUnit'];
+                        } elseif ($addon['sellingMethod'] === 'per-loom' && !empty($addon['loomSize'])) {
+                            $addonCtx = 'Per loom · ' . $addon['loomSize'];
+                        } else {
+                            $addonCtx = 'Per ' . ($addon['unitLabel'] ?: Str::after($addon['sellingMethod'], 'per-'));
+                        }
+                    @endphp
                     <article
                         @click="toggleAddOn({{ $addon['id'] }})"
                         :class="isAddOnSelected({{ $addon['id'] }}) ? 'ring-2 ring-brand dark:ring-brand-400' : 'ring-0'"
@@ -781,8 +810,11 @@ window.__pdp = {
                                 <span class="font-sans text-xs font-semibold text-white tracking-wide" x-text="isAddOnSelected({{ $addon['id'] }}) ? 'Added' : 'Add'"></span>
                             </div>
                         </div>
-                        <h4 class="font-sans text-sm font-medium text-neutral-800 dark:text-white leading-snug mb-1 group-hover:text-brand dark:group-hover:text-brand-300 transition-colors">{{ $addon['name'] }}</h4>
-                        <p class="font-sans text-sm font-semibold text-neutral-900 dark:text-white">&#8358;{{ number_format($addon['price']) }}</p>
+                        <h4 class="font-sans text-sm font-medium text-neutral-800 dark:text-white leading-snug mb-0.5 group-hover:text-brand dark:group-hover:text-brand-300 transition-colors">{{ $addon['name'] }}</h4>
+                        <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 mb-1">{{ $addonCtx }}</p>
+                        <p class="font-sans text-sm font-semibold text-neutral-900 dark:text-white">
+                            <span x-text="$store.currency ? $store.currency.format({{ (int)$addon['price'] }}) : '₦{{ number_format($addon['price']) }}'"></span>
+                        </p>
                     </article>
                     @endforeach
                 </div>
@@ -874,30 +906,31 @@ function productDetail() {
     var _unitsPerOrder = (typeof d.unitsPerOrder === 'number') ? d.unitsPerOrder : 1;
     var _sellingMethod = d.sellingMethod || '';
 
-    // ── Quantity safe initialisation ───────────────────────────────────────
-    // qty must be: >= minQty, <= stockQty, aligned to qtyStep
-    // e.g. if backend sends minQty=2, step=2: safe start = 2
-    // if minQty is not a multiple of step, snap up to nearest valid step
-    var _safeQty = _minQty;
-    if (_safeQty > _stockQty) _safeQty = _stockQty;                          // clamp to stock
-    var _stepRem = (_safeQty - _minQty) % _qtyStep;
-    if (_stepRem !== 0) _safeQty = _safeQty + (_qtyStep - _stepRem);         // align to step
-    if (_safeQty > _stockQty) _safeQty = _safeQty - _qtyStep;               // clamp again if step pushed over
-    if (_safeQty < _minQty)   _safeQty = _minQty;                            // final floor
+    // ── Safe qty init ─────────────────────────────────────────────────────
+    // Out of stock → qty = 0 (controls are hidden by Blade @if anyway, but
+    // we must not initialise to minQty when there is no stock to sell).
+    // In stock → clamp to [minQty, stockQty] and snap to nearest valid qtyStep.
+    var _safeQty;
+    if (_stockQty <= 0) {
+        _safeQty = 0;
+    } else {
+        _safeQty = _minQty;
+        if (_safeQty > _stockQty) _safeQty = _stockQty;       // clamp to available stock
+        var _stepRem = (_safeQty - _minQty) % _qtyStep;
+        if (_stepRem !== 0) _safeQty += (_qtyStep - _stepRem); // snap up to next valid step
+        if (_safeQty > _stockQty) _safeQty -= _qtyStep;        // if snap pushed over, step back
+        if (_safeQty < _minQty)   _safeQty = _minQty;          // final floor
+    }
 
     // ── Image fallback priority ────────────────────────────────────────────
-    // 1. Selected variant images
-    // 2. Product-level images ($p['images'])
-    // 3. First available variant's images
-    // 4. Placeholder
+    // 1. First variant images  2. Product images  3. Any variant  4. Placeholder
     var _firstVariant = _variants[0];
     var _startImages;
     if (_firstVariant && Array.isArray(_firstVariant.images) && _firstVariant.images.length) {
-        _startImages = _firstVariant.images;                                  // priority 1 (variant 0)
+        _startImages = _firstVariant.images;
     } else if (_fallback.length) {
-        _startImages = _fallback;                                             // priority 2 (product images)
+        _startImages = _fallback;
     } else {
-        // priority 3: scan all variants for first with images
         var _anyVariantImages = null;
         for (var _vi = 0; _vi < _variants.length; _vi++) {
             if (Array.isArray(_variants[_vi].images) && _variants[_vi].images.length) {
@@ -922,8 +955,7 @@ function productDetail() {
         unitsPerOrder:  _unitsPerOrder,
         sellingMethod:  _sellingMethod,
         activeTab:      'details',
-        // selectedAddOns: array of full catalog product objects (not price modifiers)
-        // Each entry is a separate cart line item when submitted.
+        // selectedAddOns: full catalog product objects — each is a separate cart line
         selectedAddOns: [],
         basePrice:      _basePrice,
 
@@ -934,36 +966,39 @@ function productDetail() {
             return this.qty * this.unitsPerOrder;
         },
 
-        // grandTotal = main product only (add-ons are separate line items)
+        // grandTotal = main product only. Add-ons are separate cart lines, not merged.
         get grandTotal() {
             return this.basePrice * this.qty;
         },
 
-        // addOnTotal = informational only — shown in summary, not merged into grandTotal
+        // addOnTotal = informational only (shown in "Also Adding" summary, not in grandTotal)
         get addOnTotal() {
             return this.selectedAddOns.reduce(function(sum, a) { return sum + (a.price || 0); }, 0);
         },
 
-        // ── selectedImage: the URL of the currently displayed image ───────
+        // selectedImage: URL of the currently displayed main image
         get selectedImage() {
             return this.currentImages[this.activeImage] || this.currentImages[0] || null;
         },
 
-        // ── cartPayload: full backend-ready structure ─────────────────────
-        // mainLine:     the product being viewed — one cart line
-        // relatedLines: each selected add-on as its own independent cart line
-        //               (same architecture as a regular product add to cart)
+        // ── cartPayload ───────────────────────────────────────────────────
+        // mainLine:     the product being purchased — lineType: 'main_product'
+        // relatedLines: each selected add-on as its own cart line — lineType: 'related_product'
+        //
+        // relatedLines carry the full architecture fields so the cart panel/page
+        // can render qty controls, selling method labels, and fabric totals correctly
+        // without needing a second product lookup.
         get cartPayload() {
-            var d = window.__pdp || {};
-            var v = this.variants[this.activeVariant] || null;
+            var d   = window.__pdp || {};
+            var v   = this.variants[this.activeVariant] || null;
 
-            // Main product line
             var mainLine = {
+                lineType:      'main_product',
                 slug:          d.slug,
                 name:          d.name,
                 category:      d.category,
                 sellingMethod: d.sellingMethod,
-                unitLabel:     d.unitLabel,
+                unitLabel:     d.unitLabel     || null,
                 lengthUnit:    d.lengthUnit    || null,
                 unitsPerOrder: d.unitsPerOrder || null,
                 loomSize:      d.loomSize      || null,
@@ -971,37 +1006,43 @@ function productDetail() {
                 quantityStep:  d.qtyStep,
                 stockQty:      d.stockQty,
                 quantity:      this.qty,
-                // Full selected variant object (id if available, color, hex — no images)
+                // Variant: id (PK) + color + hex. No images array — payload stays lean.
                 variant: v ? {
                     id:    v.id    || null,
                     color: v.color || null,
                     hex:   v.hex   || null,
                 } : null,
-                // Image displayed when added — for cart panel thumbnail
+                // Thumbnail for cart panel display
                 selectedImage: this.selectedImage,
-                // Per-length: total fabric for confirmation display
-                totalFabric:   this.sellingMethod === 'per-length' ? this.totalFabric : null,
+                // Per-length only: pre-computed fabric total for display & backend confirmation
+                totalFabric:   d.sellingMethod === 'per-length' ? this.totalFabric : null,
                 unitPrice:     this.basePrice,
                 totalPrice:    this.grandTotal,
             };
 
-            // Related product lines — each add-on is an independent catalog product
             var relatedLines = this.selectedAddOns.map(function(ao) {
                 return {
-                    // Full catalog product fields — backend can resolve from slug/id
+                    lineType:      'related_product',
                     id:            ao.id,
                     slug:          ao.slug          || null,
                     name:          ao.name,
                     category:      ao.category      || null,
+                    image:         ao.image         || null,
                     sellingMethod: ao.sellingMethod || null,
                     unitLabel:     ao.unitLabel     || null,
+                    // Per-length fields — null for all other selling methods
+                    lengthUnit:    ao.lengthUnit    || null,
+                    unitsPerOrder: ao.unitsPerOrder || null,
+                    // Per-loom field — null for all other selling methods
+                    loomSize:      ao.loomSize      || null,
+                    // Quantity rules — cart panel needs these to enforce controls correctly
+                    minQuantity:   ao.minQuantity   || 1,
+                    quantityStep:  ao.quantityStep  || 1,
                     stockQty:      ao.stockQuantity || null,
-                    // Related products always add 1 unit (user can adjust in cart)
-                    quantity:      1,
+                    // Starts at minQuantity so cart can adjust up/down from a valid base
+                    quantity:      ao.minQuantity   || 1,
                     unitPrice:     ao.price,
-                    totalPrice:    ao.price,
-                    // type flag: lets backend/cart treat this as a related line
-                    lineType:      'related_product',
+                    totalPrice:    ao.price * (ao.minQuantity || 1),
                 };
             });
 
@@ -1011,21 +1052,18 @@ function productDetail() {
             };
         },
 
-        // ── no separate init needed ───────────────────────────────────────
+        // ── init ──────────────────────────────────────────────────────────
         init: function() {},
 
         // ── gallery ───────────────────────────────────────────────────────
-        // Image priority: selected variant → product images → any variant → placeholder
         _resolveImages: function() {
             var v = this.variants[this.activeVariant];
             var vImgs = v && Array.isArray(v.images) && v.images.length ? v.images : [];
-
             if (vImgs.length) {
-                this.currentImages = vImgs;                                   // selected variant images
+                this.currentImages = vImgs;
             } else if (this.fallbackImages.length) {
-                this.currentImages = this.fallbackImages;                     // product-level images
+                this.currentImages = this.fallbackImages;
             } else {
-                // scan other variants for any images
                 var found = null;
                 for (var i = 0; i < this.variants.length; i++) {
                     if (Array.isArray(this.variants[i].images) && this.variants[i].images.length) {
@@ -1056,41 +1094,36 @@ function productDetail() {
         },
 
         // ── quantity ──────────────────────────────────────────────────────
-        // stockQty = total orderable units.
-        // For per-length: 8 means 8 × unitsPerOrder yards available.
-        // For per-piece/set/bundle/loom: 8 means 8 individual units.
         increaseQty: function() {
             var next = this.qty + this.qtyStep;
-            if (next <= this.stockQty) this.qty = next;     // strict ≤ prevents overselling
+            if (next <= this.stockQty) this.qty = next;
         },
         decreaseQty: function() {
             var prev = this.qty - this.qtyStep;
-            if (prev >= this.minQty) this.qty = prev;       // floor at minimum order qty
+            if (prev >= this.minQty) this.qty = prev;
         },
 
-        // ── validateQty: call before submitting ───────────────────────────
+        // validateQty: call before submitting to ensure qty is within valid bounds
         validateQty: function() {
             if (this.qty < this.minQty)   this.qty = this.minQty;
             if (this.qty > this.stockQty) this.qty = this.stockQty;
-            // Snap to nearest valid step above minQty
             var offset = (this.qty - this.minQty) % this.qtyStep;
-            if (offset !== 0) this.qty = this.qty - offset;  // round down to valid step
+            if (offset !== 0) this.qty = this.qty - offset;
             if (this.qty < this.minQty) this.qty = this.minQty;
             return this.qty >= this.minQty && this.qty <= this.stockQty;
         },
 
-        // ── add-ons: catalog products, each becomes its own cart line ─────
-        // selectedAddOns stores the full add-on product object so cartPayload
-        // has everything it needs without extra lookups.
+        // ── add-ons ───────────────────────────────────────────────────────
+        // selectedAddOns holds full catalog product objects so cartPayload
+        // has every field it needs — no extra lookup required.
         isAddOnSelected: function(id) {
             return this.selectedAddOns.some(function(a) { return a.id === id; });
         },
-        // toggleAddOn: pass the full add-on product object
+        // toggleAddOn: takes only id — resolves full object from window.__pdp.addOns
         toggleAddOn: function(id) {
             if (this.isAddOnSelected(id)) {
                 this.selectedAddOns = this.selectedAddOns.filter(function(a) { return a.id !== id; });
             } else {
-                // Find the full add-on object from window.__pdp.addOns
                 var allAddOns = Array.isArray(window.__pdp.addOns) ? window.__pdp.addOns : [];
                 var ao = null;
                 for (var i = 0; i < allAddOns.length; i++) {
@@ -1102,43 +1135,23 @@ function productDetail() {
 
         // ── cart actions ──────────────────────────────────────────────────
         addToCart: function() {
-            // Guard: cannot add if out of stock
-            if (this.stockQty <= 0) {
-                console.warn('Cannot add to cart: out of stock');
-                return;
-            }
-            // Guard: validate quantity before sending
-            if (!this.validateQty()) {
-                console.warn('Cannot add to cart: invalid quantity', this.qty);
-                return;
-            }
+            if (this.stockQty <= 0) return;
+            if (!this.validateQty()) return;
             var payload = this.cartPayload;
-            // Livewire (uncomment when ready):
-            // this.$wire.addToCart(payload)
-            // Fetch:
+            // Livewire: this.$wire.addToCart(payload)
             // fetch('/cart/add', {
             //     method: 'POST',
             //     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
             //     body: JSON.stringify(payload)
             // }).then(r => r.json()).then(function(data) { /* handle */ })
             console.log('addToCart payload:', JSON.stringify(payload, null, 2));
-            // Open the cart panel
             window.dispatchEvent(new CustomEvent('cart:open'));
         },
         buyNow: function() {
-            // Guard: cannot buy if out of stock
-            if (this.stockQty <= 0) {
-                console.warn('Cannot buy: out of stock');
-                return;
-            }
-            // Guard: validate quantity
-            if (!this.validateQty()) {
-                console.warn('Cannot buy: invalid quantity', this.qty);
-                return;
-            }
+            if (this.stockQty <= 0) return;
+            if (!this.validateQty()) return;
             var payload = this.cartPayload;
             // Livewire: this.$wire.buyNow(payload)
-            // Fetch: fetch('/checkout/now', { method:'POST', ... body: JSON.stringify(payload) })
             console.log('buyNow payload:', JSON.stringify(payload, null, 2));
         },
     };

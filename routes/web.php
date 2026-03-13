@@ -46,6 +46,10 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         return view('admin.products.form');
     })->name('products.edit');
 
+    Route::get('/media', function () {
+        return view('admin.media.index');
+    })->name('media.index');
+
     // Users
     Route::get('/users', function () {
         return view('admin.users.index');
