@@ -50,6 +50,11 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         return view('admin.media.index');
     })->name('media.index');
 
+    // Inventory
+    Route::get('/inventory', function () {
+        return view('admin.inventory.index');
+    })->name('inventory.index');
+
     // Users
     Route::get('/users', function () {
         return view('admin.users.index');
