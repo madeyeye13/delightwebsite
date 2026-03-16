@@ -5,10 +5,12 @@
 
     To open from ANY element:
     @click="$dispatch('open-quickview', {
-        name, slug, category, description,
+        id, slug, name, category, description,
         image, images:[],
-        price, old_price,
-        unit, sellingMethod,
+        price, comparePrice,
+        unitLabel, sellingMethod,
+        lengthUnit, unitsPerOrder, loomSize,
+        setContents:[], bundleYield:[],
         stockQuantity, minQuantity, quantityStep,
         variants: [{color, hex, images:[]}]
     })"
@@ -32,6 +34,8 @@
         qty:           1,
 
         open(p) {
+            // Normalize selling method: DB stores per_length, JS checks per-length
+            if (p.sellingMethod) p.sellingMethod = p.sellingMethod.replace(/_/g, '-');
             this.product       = p;
             this.activeVariant = 0;
             this.qty           = p.minQuantity || 1;
@@ -89,11 +93,12 @@
                 name:            this.product.name || '',
                 category:        this.product.category || '',
                 selling_method:  this.product.sellingMethod || 'per-piece',
-                unit_label:      this.product.unit || '',
+                unit_label:      this.product.unitLabel || this.product.unit || '',
+                length_unit:     this.product.lengthUnit || null,
                 units_per_order: this.product.unitsPerOrder || 1,
                 min_quantity:    this.product.minQuantity || 1,
                 quantity_step:   this.product.quantityStep || 1,
-                loom_size:       null,
+                loom_size:       this.product.loomSize || null,
                 quantity:        this.qty,
                 unit_price:      this.product.price || 0,
                 selected_variant: v ? { id: v.id, color: v.color, hex: v.hex } : null,
@@ -176,9 +181,9 @@
                             class="w-full h-full object-cover object-center"
                             onerror="this.src='https://placehold.co/600x750/F3F3F3/A3A3A3?text=No+Image'"
                         />
-                        <template x-if="product.old_price && product.old_price > product.price">
+                        <template x-if="(product.comparePrice || product.old_price) > product.price">
                             <span class="absolute top-4 left-4 z-10 font-sans text-2xs font-semibold tracking-wider uppercase px-2.5 py-1 bg-brand text-white pointer-events-none"
-                                  x-text="`-${Math.round(((product.old_price - product.price) / product.old_price) * 100)}%`">
+                                  x-text="(() => { const cp = product.comparePrice || product.old_price || 0; return cp > product.price ? `-${Math.round(((cp - product.price) / cp) * 100)}%` : ''; })()">
                             </span>
                         </template>
                     </div>
@@ -235,17 +240,17 @@
 
                     {{-- Price --}}
                     <div class="flex items-end gap-3 flex-wrap">
-                        <span class="font-display text-2xl font-extrabold text-neutral-900 dark:text-white leading-none tracking-tighter">
-                            &#8358;<span x-text="(product.price || 0).toLocaleString()"></span>
+                        <span class="font-display text-2xl font-extrabold text-neutral-900 dark:text-white leading-none tracking-tighter"
+                              x-text="$store.currency ? $store.currency.format(product.price || 0) : '\u20A6' + (product.price || 0).toLocaleString()">
                         </span>
-                        <template x-if="product.old_price && product.old_price > product.price">
-                            <span class="font-sans text-base text-neutral-400 dark:text-neutral-500 line-through leading-none">
-                                &#8358;<span x-text="(product.old_price || 0).toLocaleString()"></span>
+                        <template x-if="(product.comparePrice || product.old_price) > product.price">
+                            <span class="font-sans text-base text-neutral-400 dark:text-neutral-500 line-through leading-none"
+                                  x-text="$store.currency ? $store.currency.format(product.comparePrice || product.old_price || 0) : '\u20A6' + (product.comparePrice || product.old_price || 0).toLocaleString()">
                             </span>
                         </template>
-                        <template x-if="product.old_price && product.old_price > product.price">
+                        <template x-if="(product.comparePrice || product.old_price) > product.price">
                             <span class="font-sans text-xs font-semibold text-brand dark:text-brand-300 bg-brand-50 dark:bg-brand-900/30 px-2 py-0.5"
-                                  x-text="`-${Math.round(((product.old_price - product.price) / product.old_price) * 100)}%`">
+                                  x-text="(() => { const cp = product.comparePrice || product.old_price || 0; return cp > product.price ? `-${Math.round(((cp - product.price) / cp) * 100)}%` : ''; })()">
                             </span>
                         </template>
                     </div>
@@ -278,7 +283,20 @@
                             <svg viewBox="0 0 24 24" fill="none" class="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500 flex-shrink-0"><path d="M21 10H3M16 2v4M8 2v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/></svg>
                             <div>
                                 <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 uppercase tracking-wider leading-none mb-0.5">Unit</p>
-                                <p class="font-sans text-xs font-medium text-neutral-700 dark:text-neutral-300" x-text="product.unit || '—'"></p>
+                                <p class="font-sans text-xs font-medium text-neutral-700 dark:text-neutral-300"
+                                   x-text="(() => {
+                                       const sm  = product.sellingMethod;
+                                       const ul  = product.unitLabel || product.unit || '';
+                                       if (sm === 'per-length') {
+                                           const upo = product.unitsPerOrder || 0;
+                                           const lu  = product.lengthUnit || ul || 'yards';
+                                           return upo > 0 ? upo + ' ' + lu + ' per order' : lu || 'Fabric';
+                                       }
+                                       if (sm === 'per-loom')   return (product.loomSize ? product.loomSize + ' loom' : ul || 'Loom');
+                                       if (sm === 'per-set')    return ul || 'Set';
+                                       if (sm === 'per-bundle') return ul || 'Bundle';
+                                       return ul || (sm ? sm.replace(/^per-/,'') : '—');
+                                   })()"></p>
                             </div>
                         </div>
                         <div class="flex items-center gap-2">
@@ -371,22 +389,34 @@
 
                         {{-- Order summary — adapts to selling method --}}
                         <div class="bg-brand-50 dark:bg-brand-900/20 border border-brand-100 dark:border-brand-800/40 px-4 py-3 space-y-2">
-                            <p class="font-sans text-xs text-brand-700 dark:text-brand-300 font-medium">You're Getting</p>
+                            <p class="font-sans text-xs text-brand-700 dark:text-brand-300 font-medium">Order Summary</p>
 
                             <div class="flex items-center justify-between gap-3">
-                                {{-- LEFT: Unit count --}}
+                                {{-- LEFT: Unit count — label adapts to selling method --}}
                                 <div class="text-center min-w-0">
                                     <p class="font-display text-lg font-bold text-brand-700 dark:text-brand-200" x-text="qty"></p>
-                                    <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider" x-text="qty === 1 ? 'Unit' : 'Units'"></p>
+                                    <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider"
+                                       x-text="(() => {
+                                           const sm = product.sellingMethod;
+                                           const labels = {
+                                               'per-set':    [qty === 1 ? 'Set'    : 'Sets'],
+                                               'per-bundle': [qty === 1 ? 'Bundle' : 'Bundles'],
+                                               'per-loom':   [qty === 1 ? 'Loom'   : 'Looms'],
+                                               'per-length': [qty === 1 ? 'Order'  : 'Orders'],
+                                           };
+                                           if (labels[sm]) return labels[sm][0];
+                                           const unit = product.unitLabel || product.unit || 'Piece';
+                                           return qty === 1 ? unit : unit + 's';
+                                       })()"></p>
                                 </div>
 
                                 {{-- CENTER: Selling method detail --}}
                                 <template x-if="product.sellingMethod === 'per-length' && (product.unitsPerOrder || 0) > 0">
                                     <div class="flex-1 text-center min-w-0">
-                                        <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider mb-0.5" x-text="'Total ' + (product.lengthUnit || product.unit || 'Yards')"></p>
+                                        <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider mb-0.5">Total Fabric</p>
                                         <p class="font-display text-lg font-bold text-brand-700 dark:text-brand-200">
                                             <span x-text="qty * (product.unitsPerOrder || 1)"></span>
-                                            <span class="text-sm font-semibold" x-text="product.lengthUnit || product.unit || 'yards'"></span>
+                                            <span class="text-sm font-semibold" x-text="product.lengthUnit || product.unitLabel || product.unit || 'yards'"></span>
                                         </p>
                                     </div>
                                 </template>
@@ -400,10 +430,10 @@
 
                                 <template x-if="product.sellingMethod === 'per-set' && product.setContents && product.setContents.length">
                                     <div class="flex-1 text-center min-w-0">
-                                        <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider mb-0.5" x-text="'Per ' + (product.unit || 'set') + ' contains'"></p>
+                                        <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider mb-0.5">Each Set Contains</p>
                                         <template x-for="sc in product.setContents" :key="sc.name">
                                             <p class="font-sans text-xs text-brand-700 dark:text-brand-300">
-                                                <span x-text="sc.name"></span> &times; <span x-text="qty * (sc.quantity || 1)"></span>
+                                                <span x-text="sc.name"></span> &times; <span x-text="sc.quantity || 1"></span>
                                             </p>
                                         </template>
                                     </div>
@@ -411,10 +441,10 @@
 
                                 <template x-if="product.sellingMethod === 'per-bundle' && product.bundleYield && product.bundleYield.length">
                                     <div class="flex-1 text-center min-w-0">
-                                        <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider mb-0.5" x-text="'Per ' + (product.unit || 'bundle') + ' gives you'"></p>
+                                        <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider mb-0.5">Each Bundle Gives</p>
                                         <template x-for="by in product.bundleYield" :key="by.name">
                                             <p class="font-sans text-xs text-brand-700 dark:text-brand-300">
-                                                <span x-text="by.name"></span> &times; <span x-text="qty * (by.quantity || 1)"></span>
+                                                <span x-text="by.name"></span> &times; <span x-text="by.quantity || 1"></span>
                                             </p>
                                         </template>
                                     </div>
@@ -422,8 +452,8 @@
 
                                 <template x-if="product.sellingMethod === 'per-piece' || (!product.sellingMethod || (product.sellingMethod !== 'per-length' && product.sellingMethod !== 'per-loom' && product.sellingMethod !== 'per-set' && product.sellingMethod !== 'per-bundle'))">
                                     <div class="flex-1 text-center min-w-0">
-                                        <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider mb-0.5">Sold As</p>
-                                        <p class="font-display text-sm font-bold text-brand-700 dark:text-brand-200" x-text="product.unit || 'Piece'"></p>
+                                        <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider mb-0.5">Unit Type</p>
+                                        <p class="font-display text-sm font-bold text-brand-700 dark:text-brand-200" x-text="product.unitLabel || product.unit || 'Piece'"></p>
                                     </div>
                                 </template>
 

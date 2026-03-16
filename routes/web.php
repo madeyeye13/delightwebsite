@@ -24,6 +24,10 @@ Route::get('/cart', function () {
     return view('frontend.cart.index');
 })->name('cart.index');
 
+Route::get('/checkout', function () {
+    return view('frontend.checkout.index');
+})->name('checkout.index');
+
 // ─── Preview helpers (development only) ──────────────────────────────────────
 
 Route::get('/preview/product', function () {

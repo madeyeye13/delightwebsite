@@ -53,7 +53,7 @@ class FeaturedProducts extends Component
                     'slug' => $product->slug,
                     'category' => $product->category?->name ?? '',
                     'description' => $product->description ?? '',
-                    'sellingMethod' => $product->sellingMethod?->config_type ?? 'per-piece',
+                    'sellingMethod' => str_replace('_', '-', $product->sellingMethod?->config_type ?? 'per-piece'),
                     'unitsPerOrder' => $product->units_per_order,
                     'lengthUnit' => $product->length_unit ?? '',
                     'loomSize' => $product->loom_size,

@@ -188,6 +188,9 @@ if (!isset($product) || $product === null) {
 }
 
 // ── COMPUTED VALUES ────────────────────────────────────────────────────────────
+// Normalize selling method: DB stores per_length, templates expect per-length
+$p['sellingMethod'] = str_replace('_', '-', $p['sellingMethod']);
+
 $finalPriceInt = (int) round((float) $p['finalPrice']);
 
 $stock = (int) $p['stockQuantity'];

@@ -225,7 +225,7 @@ class CartSync extends Component
                     'category' => $categoryName,
                     'subcategory' => $subcategoryName,
                     'image' => $image,
-                    'selling_method' => $product->sellingMethod?->config_type ?? 'per-piece',
+                    'selling_method' => str_replace('_', '-', $product->sellingMethod?->config_type ?? 'per-piece'),
                     'unit_label' => $unitLabel,
                     'length_unit' => $product->length_unit,
                     'units_per_order' => $product->units_per_order,
