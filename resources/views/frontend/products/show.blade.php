@@ -50,6 +50,7 @@
 
 // ── MOCK DATA ─────────────────────────────────────────────────────────────────
 $mock = [
+    'id'            => 0,
     'name'          => 'Premium French Lace Fabric',
     'slug'          => 'premium-french-lace-fabric',
     'category'      => 'Lace Fabrics',
@@ -69,18 +70,17 @@ $mock = [
     ],
     'excludesText'  => 'Accessories, bags and shoes used for styling are not included.',
     'price'         => 28500,
+    'finalPrice'    => 23940,
     'comparePrice'  => 34000,
     'discountType'  => 'percent',
     'discountValue' => 16,
     'stockQuantity' => 8,
-    'images'        => [],  // ← BACKEND: $product->images — fallback when no variants
+    'images'        => [],
     'variants'  => [
-        // id: your variant primary key (variant_id in DB). Used in cartPayload so backend
-        // can resolve the exact variant record without a slug+color double-lookup.
-        ['id' => 101, 'color' => 'Ivory White',  'hex' => '#F5F0E8', 'images' => ['images/products/lace-ivory-1.jpg','images/products/lace-ivory-2.jpg','images/products/lace-ivory-3.jpg']],
-        ['id' => 102, 'color' => 'Royal Blue',   'hex' => '#2C4A8F', 'images' => ['images/products/lace-blue-1.jpg','images/products/lace-blue-2.jpg']],
-        ['id' => 103, 'color' => 'Champagne',    'hex' => '#C9A96E', 'images' => ['images/products/lace-champ-1.jpg','images/products/lace-champ-2.jpg']],
-        ['id' => 104, 'color' => 'Forest Green', 'hex' => '#1F6F67', 'images' => ['images/products/lace-green-1.jpg']],
+        ['id' => 101, 'color' => 'Ivory White',  'hex' => '#F5F0E8', 'images' => ['images/products/lace-ivory-1.jpg','images/products/lace-ivory-2.jpg','images/products/lace-ivory-3.jpg'], 'stock' => 4, 'priceAdjustment' => 0],
+        ['id' => 102, 'color' => 'Royal Blue',   'hex' => '#2C4A8F', 'images' => ['images/products/lace-blue-1.jpg','images/products/lace-blue-2.jpg'], 'stock' => 2, 'priceAdjustment' => 0],
+        ['id' => 103, 'color' => 'Champagne',    'hex' => '#C9A96E', 'images' => ['images/products/lace-champ-1.jpg','images/products/lace-champ-2.jpg'], 'stock' => 2, 'priceAdjustment' => 500],
+        ['id' => 104, 'color' => 'Forest Green', 'hex' => '#1F6F67', 'images' => ['images/products/lace-green-1.jpg'], 'stock' => 0, 'priceAdjustment' => 0],
     ],
     // addOns: real catalog products — each becomes its own independent cart line.
     // Shape mirrors your product architecture so the cart panel/page can render them correctly.
@@ -173,6 +173,7 @@ if (!isset($product) || $product === null) {
         'includedItems' => $toSafeArray($product->includedItems ?? null, []),
         'excludesText'  => (string)  ($product->excludesText  ?? ''),
         'price'         => max(0, (float) ($product->price         ?? 0)),
+        'finalPrice'    => max(0, (float) ($product->finalPrice    ?? $product->price ?? 0)),
         'comparePrice'  => max(0, (float) ($product->comparePrice  ?? 0)),
         'discountType'  => $product->discountType  ?? null,
         'discountValue' => max(0, (float) ($product->discountValue ?? 0)),
@@ -187,20 +188,14 @@ if (!isset($product) || $product === null) {
 }
 
 // ── COMPUTED VALUES ────────────────────────────────────────────────────────────
-$finalPrice = (float) $p['price'];
-if ($p['discountType'] === 'percent' && $p['discountValue'] > 0) {
-    $finalPrice = $finalPrice * (1 - $p['discountValue'] / 100);
-} elseif ($p['discountType'] === 'fixed' && $p['discountValue'] > 0) {
-    $finalPrice = max(0.0, $finalPrice - $p['discountValue']);
-}
-$finalPriceInt = (int) round($finalPrice);
+$finalPriceInt = (int) round((float) $p['finalPrice']);
 
 $stock = (int) $p['stockQuantity'];
 $stockStatus = $stock <= 0 ? 'out' : ($stock <= 10 ? 'low' : 'high');
 
 $hasDiscount     = !empty($p['discountType']) && $p['discountValue'] > 0;
 $hasComparePrice = ($p['comparePrice'] ?? 0) > $p['price'];
-$hasVariants     = count((array) $p['variants']) > 1;
+$hasVariants     = count((array) $p['variants']) >= 1;
 $hasAddOns       = !empty($p['addOns']);
 $hasIncluded     = !empty($p['includedItems']);
 $hasExcludes     = !empty($p['excludesText']);
@@ -213,23 +208,25 @@ $hasExcludes     = !empty($p['excludesText']);
 <script>
 window.__pdp = {
     // ── Identity ──────────────────────────────────────────────────────────
+    id:             {{ (int) ($p['id'] ?? 0) }},
     slug:           "{{ e($p['slug']) }}",
     name:           "{{ e($p['name']) }}",
     category:       "{{ e($p['category']) }}",
     // ── Selling architecture ──────────────────────────────────────────────
     sellingMethod:  "{{ e($p['sellingMethod']) }}",
     unitLabel:      "{{ e($p['unitLabel']) }}",
-    lengthUnit:     "{{ e($p['lengthUnit']) }}",
+    lengthUnit:     "{{ e($p['lengthUnit'] ?? '') }}",
     unitsPerOrder:  {{ (int) $p['unitsPerOrder'] }},
     loomSize:       {{ !empty($p['loomSize']) ? '"' . e($p['loomSize']) . '"' : 'null' }},
+    setContents:    {!! json_encode(array_values((array) ($p['setContents'] ?? []))) !!},
+    bundleYield:    {!! json_encode(array_values((array) ($p['bundleYield'] ?? []))) !!},
     // ── Quantity rules ────────────────────────────────────────────────────
     minQty:         {{ (int) $p['minQuantity'] }},
     qtyStep:        {{ (int) $p['quantityStep'] }},
-    // stockQty: orderable unit count. Per-length = unit-blocks (e.g. 8 × 5yds = 40yds).
-    // Per-piece/set/bundle/loom = actual sellable item count.
     stockQty:       {{ $stock }},
     // ── Pricing ───────────────────────────────────────────────────────────
     basePrice:      {{ $finalPriceInt }},
+    rawPrice:       {{ (int) round((float) $p['price']) }},
     // ── Gallery ───────────────────────────────────────────────────────────
     variants:       {!! json_encode(array_values((array) $p['variants'])) !!},
     images:         {!! json_encode(array_values((array) $p['images'])) !!},
@@ -333,19 +330,21 @@ window.__pdp = {
                     {{ $p['category'] }}
                 </span>
 
-                @if($stockStatus === 'out')
-                <span class="inline-flex items-center gap-1.5 font-sans text-2xs font-semibold tracking-wide uppercase px-2.5 py-1 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20">
-                    <span class="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0"></span>Out of Stock
-                </span>
-                @elseif($stockStatus === 'low')
-                <span class="inline-flex items-center gap-1.5 font-sans text-2xs font-semibold tracking-wide uppercase px-2.5 py-1 bg-accent-50 dark:bg-accent-500/10 text-accent-600 dark:text-accent-300 border border-accent-200 dark:border-accent-500/20">
-                    <span class="w-1.5 h-1.5 rounded-full bg-accent-400 animate-pulse flex-shrink-0"></span>Only {{ $stock }} left
-                </span>
-                @else
-                <span class="inline-flex items-center gap-1.5 font-sans text-2xs font-semibold tracking-wide uppercase px-2.5 py-1 bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-300 border border-brand-200 dark:border-brand-500/20">
-                    <span class="w-1.5 h-1.5 rounded-full bg-brand flex-shrink-0"></span>In Stock
-                </span>
-                @endif
+                <template x-if="stockQty <= 0">
+                    <span class="inline-flex items-center gap-1.5 font-sans text-2xs font-semibold tracking-wide uppercase px-2.5 py-1 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20">
+                        <span class="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0"></span>Out of Stock
+                    </span>
+                </template>
+                <template x-if="stockQty > 0 && stockQty <= 10">
+                    <span class="inline-flex items-center gap-1.5 font-sans text-2xs font-semibold tracking-wide uppercase px-2.5 py-1 bg-accent-50 dark:bg-accent-500/10 text-accent-600 dark:text-accent-300 border border-accent-200 dark:border-accent-500/20">
+                        <span class="w-1.5 h-1.5 rounded-full bg-accent-400 animate-pulse flex-shrink-0"></span>Only <span x-text="stockQty"></span> left
+                    </span>
+                </template>
+                <template x-if="stockQty > 10">
+                    <span class="inline-flex items-center gap-1.5 font-sans text-2xs font-semibold tracking-wide uppercase px-2.5 py-1 bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-300 border border-brand-200 dark:border-brand-500/20">
+                        <span class="w-1.5 h-1.5 rounded-full bg-brand flex-shrink-0"></span>In Stock
+                    </span>
+                </template>
             </div>
 
             {{-- Name --}}
@@ -365,7 +364,7 @@ window.__pdp = {
                 @endif
                 @if($hasDiscount)
                 <span class="font-sans text-xs font-semibold text-brand dark:text-brand-300 bg-brand-50 dark:bg-brand-900/30 px-2 py-0.5">
-                    @if($p['discountType'] === 'percent')&minus;{{ $p['discountValue'] }}%@else<span x-text="$store.currency ? '&minus;' + $store.currency.format({{ (int)$p['discountValue'] }}) : '&minus;₦{{ number_format($p['discountValue']) }}'"></span>@endif
+                    @if($p['discountType'] === 'percent')&minus;{{ $p['discountValue'] }}%@else<span>&minus;</span><span x-text="$store.currency ? $store.currency.format({{ (int)$p['discountValue'] }}) : '₦{{ number_format($p['discountValue']) }}'"></span>@endif
                 </span>
                 @endif
                 {{-- Related items are separate cart lines — never merged into this price --}}
@@ -401,20 +400,18 @@ window.__pdp = {
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
-                    @if($stockStatus === 'out')
-                    <svg viewBox="0 0 24 24" fill="none" class="w-3.5 h-3.5 text-red-400 flex-shrink-0"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/><path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-                    @else
-                    <svg viewBox="0 0 24 24" fill="none" class="w-3.5 h-3.5 text-brand flex-shrink-0"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    @endif
+                    <template x-if="stockQty <= 0">
+                        <svg viewBox="0 0 24 24" fill="none" class="w-3.5 h-3.5 text-red-400 flex-shrink-0"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/><path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                    </template>
+                    <template x-if="stockQty > 0">
+                        <svg viewBox="0 0 24 24" fill="none" class="w-3.5 h-3.5 text-brand flex-shrink-0"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </template>
                     <div>
                         <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 uppercase tracking-wider leading-none mb-0.5">Availability</p>
-                        @if($stockStatus === 'out')
-                        <p class="font-sans text-xs font-medium text-red-500">Unavailable</p>
-                        @elseif($stockStatus === 'low')
-                        <p class="font-sans text-xs font-medium text-accent-600 dark:text-accent-400">{{ $stock }} remaining</p>
-                        @else
-                        <p class="font-sans text-xs font-medium text-brand">Available</p>
-                        @endif
+                        <p class="font-sans text-xs font-medium"
+                           :class="stockQty <= 0 ? 'text-red-500' : stockQty <= 10 ? 'text-accent-600 dark:text-accent-400' : 'text-brand'"
+                           x-text="stockQty <= 0 ? 'Unavailable' : stockQty <= 10 ? stockQty + ' remaining' : 'Available'">
+                        </p>
                     </div>
                 </div>
             </div>
@@ -499,8 +496,7 @@ window.__pdp = {
             </div>
 
             {{-- Quantity selector + live summary --}}
-            @if($stockStatus !== 'out')
-            <div class="space-y-3">
+            <div x-show="stockQty > 0" class="space-y-3">
                 <div class="flex items-center gap-4">
                     <span class="font-sans text-xs font-semibold tracking-wider uppercase text-neutral-500 dark:text-neutral-400 w-20 flex-shrink-0">Quantity</span>
                     <div class="flex items-center border border-neutral-200 dark:border-neutral-700">
@@ -539,44 +535,62 @@ window.__pdp = {
                     @endif
                 </div>
 
-                @if($p['sellingMethod'] === 'per-length')
-                {{-- Per-length live summary --}}
-                <div class="bg-brand-50 dark:bg-brand-900/20 border border-brand-100 dark:border-brand-800/40 px-4 py-3">
-                    <div class="flex items-center justify-between gap-2 flex-wrap">
-                        <span class="font-sans text-xs text-brand-700 dark:text-brand-300 font-medium">Order Summary</span>
-                        <div class="flex items-center gap-4 sm:gap-6">
-                            <div class="text-right">
-                                <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider">Units</p>
-                                <p class="font-display text-sm font-bold text-brand-700 dark:text-brand-200" x-text="qty"></p>
-                            </div>
-                            <div class="w-px h-7 bg-brand-200 dark:bg-brand-700 flex-shrink-0"></div>
-                            <div class="text-right">
-                                <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider">Total Fabric</p>
-                                <p class="font-display text-sm font-bold text-brand-700 dark:text-brand-200"><span x-text="totalFabric"></span> <span class="font-normal text-xs">{{ $p['lengthUnit'] }}</span></p>
-                            </div>
-                            <div class="w-px h-7 bg-brand-200 dark:bg-brand-700 flex-shrink-0"></div>
-                            <div class="text-right">
-                                <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider">Total Price</p>
-                                <p class="font-display text-sm font-bold text-brand-700 dark:text-brand-200"
-                                   x-text="$store.currency ? $store.currency.format(grandTotal) : '₦' + grandTotal.toLocaleString()"></p>
-                            </div>
+                {{-- ── Order Summary — adapts to selling method ──────────── --}}
+                <div class="bg-brand-50 dark:bg-brand-900/20 border border-brand-100 dark:border-brand-800/40 px-4 py-3 space-y-2">
+                    <p class="font-sans text-xs text-brand-700 dark:text-brand-300 font-medium">You're Getting</p>
+
+                    <div class="flex items-center justify-between gap-3">
+                        {{-- LEFT: Unit count --}}
+                        <div class="text-center min-w-0">
+                            <p class="font-display text-lg font-bold text-brand-700 dark:text-brand-200" x-text="qty"></p>
+                            <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider" x-text="qty === 1 ? 'Unit' : 'Units'"></p>
+                        </div>
+
+                        @if($p['sellingMethod'] === 'per-length' && $p['unitsPerOrder'] > 0)
+                        {{-- CENTER: Total length --}}
+                        <div class="flex-1 text-center min-w-0">
+                            <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider mb-0.5">Total {{ ucfirst($p['lengthUnit'] ?: 'length') }}</p>
+                            <p class="font-display text-lg font-bold text-brand-700 dark:text-brand-200"><span x-text="qty * {{ (int)$p['unitsPerOrder'] }}"></span> <span class="text-sm font-semibold">{{ $p['lengthUnit'] }}</span></p>
+                        </div>
+                        @elseif($p['sellingMethod'] === 'per-set' && !empty($p['setContents']))
+                        {{-- CENTER: Set contents --}}
+                        <div class="flex-1 text-center min-w-0">
+                            <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider mb-0.5">Per {{ $p['unitLabel'] ?: 'set' }} contains</p>
+                            @foreach((array) $p['setContents'] as $item)
+                            <p class="font-sans text-xs text-brand-700 dark:text-brand-300">{{ $item['name'] }} &times; <span x-text="qty * {{ (int)$item['quantity'] }}"></span></p>
+                            @endforeach
+                        </div>
+                        @elseif($p['sellingMethod'] === 'per-bundle' && !empty($p['bundleYield']))
+                        {{-- CENTER: Bundle yield --}}
+                        <div class="flex-1 text-center min-w-0">
+                            <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider mb-0.5">Per {{ $p['unitLabel'] ?: 'bundle' }} gives you</p>
+                            @foreach((array) $p['bundleYield'] as $item)
+                            <p class="font-sans text-xs text-brand-700 dark:text-brand-300">{{ $item['name'] }} &times; <span x-text="qty * {{ (int)$item['quantity'] }}"></span></p>
+                            @endforeach
+                        </div>
+                        @elseif($p['sellingMethod'] === 'per-loom' && !empty($p['loomSize']))
+                        {{-- CENTER: Loom size --}}
+                        <div class="flex-1 text-center min-w-0">
+                            <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider mb-0.5">Loom Size</p>
+                            <p class="font-display text-sm font-bold text-brand-700 dark:text-brand-200">{{ $p['loomSize'] }}</p>
+                        </div>
+                        @elseif($p['sellingMethod'] === 'per-piece')
+                        {{-- CENTER: Piece label --}}
+                        <div class="flex-1 text-center min-w-0">
+                            <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider mb-0.5">Sold As</p>
+                            <p class="font-display text-sm font-bold text-brand-700 dark:text-brand-200">{{ ucfirst($p['unitLabel'] ?: 'Piece') }}</p>
+                        </div>
+                        @endif
+
+                        {{-- RIGHT: Total price --}}
+                        <div class="text-right min-w-0">
+                            <p class="font-display text-lg font-bold text-brand-700 dark:text-brand-200"
+                               x-text="$store.currency ? $store.currency.format(grandTotal) : '₦' + grandTotal.toLocaleString()"></p>
+                            <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider">Total Price</p>
                         </div>
                     </div>
                 </div>
-                @else
-                {{-- Generic live summary --}}
-                <div class="bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-100 dark:border-neutral-800 px-4 py-3 flex items-center justify-between flex-wrap gap-3">
-                    <span class="font-sans text-xs text-neutral-500 dark:text-neutral-400">
-                        <span class="font-semibold text-neutral-800 dark:text-white" x-text="qty"></span> &times; {{ $p['unitLabel'] ?: 'unit' }}
-                    </span>
-                    <span class="font-sans text-xs text-neutral-500 dark:text-neutral-400">
-                        Total: <span class="font-semibold text-neutral-800 dark:text-white"
-                                     x-text="$store.currency ? $store.currency.format(grandTotal) : '₦' + grandTotal.toLocaleString()"></span>
-                    </span>
-                </div>
-                @endif
             </div>
-            @endif
 
             {{-- ── INLINE ADD-ONS ───────────────────────────────────────── --}}
             @if($hasAddOns)
@@ -662,12 +676,13 @@ window.__pdp = {
             {{-- CTA buttons --}}
             <div class="flex flex-col sm:flex-row gap-3 pt-1">
                 @if($stockStatus !== 'out')
-                <button @click="addToCart()" class="flex-1 inline-flex items-center justify-center gap-2.5 px-6 py-3.5 bg-brand hover:bg-brand-600 active:bg-brand-700 text-white font-sans text-sm font-semibold tracking-wide transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 dark:focus:ring-offset-ink">
-                    <svg viewBox="0 0 24 24" fill="none" class="w-4 h-4 flex-shrink-0"><path d="M5 6.5h16l-2.024 10H7.024L5 6.5Zm0 0L4.364 3H1" stroke="currentColor" stroke-width="1.4"/><circle cx="8.5" cy="20.5" r="1" stroke="currentColor" stroke-width="1.4"/><circle cx="17.5" cy="20.5" r="1" stroke="currentColor" stroke-width="1.4"/></svg>
-                    Add to Cart
+                <button @click="addToCart()" :disabled="isAdding || stockQty <= 0" class="flex-1 inline-flex items-center justify-center gap-2.5 px-6 py-3.5 bg-brand hover:bg-brand-600 active:bg-brand-700 text-white font-sans text-sm font-semibold tracking-wide transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 dark:focus:ring-offset-ink disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg x-show="!isAdding" viewBox="0 0 24 24" fill="none" class="w-4 h-4 flex-shrink-0"><path d="M5 6.5h16l-2.024 10H7.024L5 6.5Zm0 0L4.364 3H1" stroke="currentColor" stroke-width="1.4"/><circle cx="8.5" cy="20.5" r="1" stroke="currentColor" stroke-width="1.4"/><circle cx="17.5" cy="20.5" r="1" stroke="currentColor" stroke-width="1.4"/></svg>
+                    <svg x-show="isAdding" class="w-4 h-4 animate-spin flex-shrink-0" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" stroke-dasharray="31.4 31.4" stroke-linecap="round"/></svg>
+                    <span x-text="isAdding ? 'Adding…' : 'Add to Cart'"></span>
                 </button>
-                <button @click="buyNow()" class="flex-1 inline-flex items-center justify-center gap-2.5 px-6 py-3.5 bg-neutral-900 dark:bg-white hover:bg-neutral-700 dark:hover:bg-neutral-100 text-white dark:text-neutral-900 font-sans text-sm font-semibold tracking-wide transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:ring-offset-2 dark:focus:ring-offset-ink">
-                    Buy Now
+                <button @click="buyNow()" :disabled="isBuying || isAdding || stockQty <= 0" class="flex-1 inline-flex items-center justify-center gap-2.5 px-6 py-3.5 bg-neutral-900 dark:bg-white hover:bg-neutral-700 dark:hover:bg-neutral-100 text-white dark:text-neutral-900 font-sans text-sm font-semibold tracking-wide transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:ring-offset-2 dark:focus:ring-offset-ink disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span x-text="isBuying ? 'Redirecting…' : 'Buy Now'"></span>
                 </button>
                 @else
                 <button disabled class="flex-1 inline-flex items-center justify-center gap-2.5 px-6 py-3.5 bg-neutral-200 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 font-sans text-sm font-semibold tracking-wide cursor-not-allowed">Out of Stock</button>
@@ -677,10 +692,7 @@ window.__pdp = {
 
             {{-- Secondary actions --}}
             <div class="flex items-center gap-5">
-                <button class="inline-flex items-center gap-1.5 font-sans text-xs text-neutral-400 dark:text-neutral-500 hover:text-brand dark:hover:text-brand-300 transition-colors">
-                    <svg viewBox="0 0 24 24" fill="none" class="w-4 h-4"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" stroke-width="1.3"/></svg>
-                    Add to Wishlist
-                </button>
+                <livewire:frontend.wishlist-toggle :productId="$p['id'] ?? 0" />
                 <button class="inline-flex items-center gap-1.5 font-sans text-xs text-neutral-400 dark:text-neutral-500 hover:text-brand dark:hover:text-brand-300 transition-colors">
                     <svg viewBox="0 0 24 24" fill="none" class="w-4 h-4"><circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="1.3"/><circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="1.3"/><circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="1.3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="currentColor" stroke-width="1.3"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="currentColor" stroke-width="1.3"/></svg>
                     Share
@@ -823,65 +835,7 @@ window.__pdp = {
 
             {{-- REVIEWS TAB --}}
             <div x-show="activeTab === 'reviews'" x-transition:enter="transition-opacity duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100">
-                <div class="max-w-2xl space-y-8">
-
-                    {{-- Placeholder — wire to your Livewire reviews component later --}}
-                    {{-- <livewire:product.reviews :product-id="$p['slug']" /> --}}
-
-                    <div class="space-y-6">
-                        {{-- Summary bar --}}
-                        <div class="flex items-center gap-6 pb-6 border-b border-neutral-100 dark:border-neutral-800">
-                            <div class="text-center flex-shrink-0">
-                                <p class="font-display text-5xl font-extrabold text-neutral-900 dark:text-white leading-none">4.8</p>
-                                <div class="flex items-center justify-center gap-0.5 mt-1.5">
-                                    @for($s = 1; $s <= 5; $s++)
-                                    <svg class="w-3.5 h-3.5 {{ $s <= 4 ? 'text-brand' : 'text-neutral-200 dark:text-neutral-700' }}" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                                    @endfor
-                                </div>
-                                <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 mt-1">24 reviews</p>
-                            </div>
-                            <div class="flex-1 space-y-1.5">
-                                @foreach([5=>83, 4=>10, 3=>4, 2=>2, 1=>1] as $star => $pct)
-                                <div class="flex items-center gap-2">
-                                    <span class="font-sans text-2xs text-neutral-500 dark:text-neutral-400 w-2">{{ $star }}</span>
-                                    <div class="flex-1 h-1.5 bg-neutral-100 dark:bg-neutral-800">
-                                        <div class="h-full bg-brand" style="width: {{ $pct }}%"></div>
-                                    </div>
-                                    <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 w-6 text-right">{{ $pct }}%</span>
-                                </div>
-                                @endforeach
-                            </div>
-                        </div>
-
-                        {{-- Individual reviews --}}
-                        @foreach([
-                            ['name' => 'Adaeze O.', 'rating' => 5, 'date' => '2 weeks ago', 'text' => 'Absolutely stunning fabric. The quality exceeded my expectations — the lace pattern is intricate and the base fabric is soft. Will definitely order again for my next owambe.'],
-                            ['name' => 'Funmi B.',  'rating' => 5, 'date' => '1 month ago',  'text' => 'My tailor loved working with this. The colour is exactly as pictured and the packaging was very neat. Fast delivery too.'],
-                            ['name' => 'Ngozi K.',  'rating' => 4, 'date' => '2 months ago', 'text' => 'Great quality overall. Only reason for 4 stars is I wished the ivory was slightly brighter, but the fabric itself is premium and well worth the price.'],
-                        ] as $review)
-                        <div class="pb-6 border-b border-neutral-100 dark:border-neutral-800 last:border-0">
-                            <div class="flex items-start justify-between gap-3 mb-2">
-                                <div>
-                                    <p class="font-sans text-sm font-semibold text-neutral-900 dark:text-white">{{ $review['name'] }}</p>
-                                    <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">{{ $review['date'] }}</p>
-                                </div>
-                                <div class="flex items-center gap-0.5 flex-shrink-0">
-                                    @for($s = 1; $s <= 5; $s++)
-                                    <svg class="w-3 h-3 {{ $s <= $review['rating'] ? 'text-brand' : 'text-neutral-200 dark:text-neutral-700' }}" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                                    @endfor
-                                </div>
-                            </div>
-                            <p class="font-sans text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">{{ $review['text'] }}</p>
-                        </div>
-                        @endforeach
-
-                        {{-- Write a review CTA — wire to Livewire modal later --}}
-                        <button class="inline-flex items-center gap-2 font-sans text-sm font-semibold text-brand dark:text-brand-300 hover:underline">
-                            <svg viewBox="0 0 24 24" fill="none" class="w-4 h-4"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-                            Write a Review
-                        </button>
-                    </div>
-                </div>
+                <livewire:frontend.product-reviews :productId="$p['id'] ?? 0" />
             </div>
 
         </div>
@@ -902,28 +856,33 @@ function productDetail() {
     var _minQty        = (typeof d.minQty  === 'number' && d.minQty  >= 1) ? d.minQty  : 1;
     var _qtyStep       = (typeof d.qtyStep === 'number' && d.qtyStep >= 1) ? d.qtyStep : 1;
     var _stockQty      = (typeof d.stockQty  === 'number') ? d.stockQty  : 0;
+
+    // If product has variants, use the first variant's stock instead of total
+    if (_variants.length > 0 && typeof _variants[0].stock === 'number') {
+        _stockQty = _variants[0].stock;
+    }
     var _basePrice     = (typeof d.basePrice === 'number' && d.basePrice > 0) ? d.basePrice : 0;
     var _unitsPerOrder = (typeof d.unitsPerOrder === 'number') ? d.unitsPerOrder : 1;
     var _sellingMethod = d.sellingMethod || '';
 
+    // Variant price adjustment for the first (default) variant
+    var _variantAdj = (_variants.length > 0 && typeof _variants[0].priceAdjustment === 'number')
+        ? _variants[0].priceAdjustment : 0;
+
     // ── Safe qty init ─────────────────────────────────────────────────────
-    // Out of stock → qty = 0 (controls are hidden by Blade @if anyway, but
-    // we must not initialise to minQty when there is no stock to sell).
-    // In stock → clamp to [minQty, stockQty] and snap to nearest valid qtyStep.
     var _safeQty;
     if (_stockQty <= 0) {
         _safeQty = 0;
     } else {
         _safeQty = _minQty;
-        if (_safeQty > _stockQty) _safeQty = _stockQty;       // clamp to available stock
+        if (_safeQty > _stockQty) _safeQty = _stockQty;
         var _stepRem = (_safeQty - _minQty) % _qtyStep;
-        if (_stepRem !== 0) _safeQty += (_qtyStep - _stepRem); // snap up to next valid step
-        if (_safeQty > _stockQty) _safeQty -= _qtyStep;        // if snap pushed over, step back
-        if (_safeQty < _minQty)   _safeQty = _minQty;          // final floor
+        if (_stepRem !== 0) _safeQty += (_qtyStep - _stepRem);
+        if (_safeQty > _stockQty) _safeQty -= _qtyStep;
+        if (_safeQty < _minQty)   _safeQty = _minQty;
     }
 
     // ── Image fallback priority ────────────────────────────────────────────
-    // 1. First variant images  2. Product images  3. Any variant  4. Placeholder
     var _firstVariant = _variants[0];
     var _startImages;
     if (_firstVariant && Array.isArray(_firstVariant.images) && _firstVariant.images.length) {
@@ -955,101 +914,29 @@ function productDetail() {
         unitsPerOrder:  _unitsPerOrder,
         sellingMethod:  _sellingMethod,
         activeTab:      'details',
-        // selectedAddOns: full catalog product objects — each is a separate cart line
         selectedAddOns: [],
         basePrice:      _basePrice,
+        variantAdjustment: _variantAdj,
+        isAdding:       false,
+        isBuying:       false,
 
         // ── computed ──────────────────────────────────────────────────────
 
-        // Total fabric for per-length: qty units × yards-per-unit
         get totalFabric() {
             return this.qty * this.unitsPerOrder;
         },
 
-        // grandTotal = main product only. Add-ons are separate cart lines, not merged.
+        // grandTotal includes variant price adjustment
         get grandTotal() {
-            return this.basePrice * this.qty;
+            return (this.basePrice + this.variantAdjustment) * this.qty;
         },
 
-        // addOnTotal = informational only (shown in "Also Adding" summary, not in grandTotal)
         get addOnTotal() {
             return this.selectedAddOns.reduce(function(sum, a) { return sum + (a.price || 0); }, 0);
         },
 
-        // selectedImage: URL of the currently displayed main image
         get selectedImage() {
             return this.currentImages[this.activeImage] || this.currentImages[0] || null;
-        },
-
-        // ── cartPayload ───────────────────────────────────────────────────
-        // mainLine:     the product being purchased — lineType: 'main_product'
-        // relatedLines: each selected add-on as its own cart line — lineType: 'related_product'
-        //
-        // relatedLines carry the full architecture fields so the cart panel/page
-        // can render qty controls, selling method labels, and fabric totals correctly
-        // without needing a second product lookup.
-        get cartPayload() {
-            var d   = window.__pdp || {};
-            var v   = this.variants[this.activeVariant] || null;
-
-            var mainLine = {
-                lineType:      'main_product',
-                slug:          d.slug,
-                name:          d.name,
-                category:      d.category,
-                sellingMethod: d.sellingMethod,
-                unitLabel:     d.unitLabel     || null,
-                lengthUnit:    d.lengthUnit    || null,
-                unitsPerOrder: d.unitsPerOrder || null,
-                loomSize:      d.loomSize      || null,
-                minQuantity:   d.minQty,
-                quantityStep:  d.qtyStep,
-                stockQty:      d.stockQty,
-                quantity:      this.qty,
-                // Variant: id (PK) + color + hex. No images array — payload stays lean.
-                variant: v ? {
-                    id:    v.id    || null,
-                    color: v.color || null,
-                    hex:   v.hex   || null,
-                } : null,
-                // Thumbnail for cart panel display
-                selectedImage: this.selectedImage,
-                // Per-length only: pre-computed fabric total for display & backend confirmation
-                totalFabric:   d.sellingMethod === 'per-length' ? this.totalFabric : null,
-                unitPrice:     this.basePrice,
-                totalPrice:    this.grandTotal,
-            };
-
-            var relatedLines = this.selectedAddOns.map(function(ao) {
-                return {
-                    lineType:      'related_product',
-                    id:            ao.id,
-                    slug:          ao.slug          || null,
-                    name:          ao.name,
-                    category:      ao.category      || null,
-                    image:         ao.image         || null,
-                    sellingMethod: ao.sellingMethod || null,
-                    unitLabel:     ao.unitLabel     || null,
-                    // Per-length fields — null for all other selling methods
-                    lengthUnit:    ao.lengthUnit    || null,
-                    unitsPerOrder: ao.unitsPerOrder || null,
-                    // Per-loom field — null for all other selling methods
-                    loomSize:      ao.loomSize      || null,
-                    // Quantity rules — cart panel needs these to enforce controls correctly
-                    minQuantity:   ao.minQuantity   || 1,
-                    quantityStep:  ao.quantityStep  || 1,
-                    stockQty:      ao.stockQuantity || null,
-                    // Starts at minQuantity so cart can adjust up/down from a valid base
-                    quantity:      ao.minQuantity   || 1,
-                    unitPrice:     ao.price,
-                    totalPrice:    ao.price * (ao.minQuantity || 1),
-                };
-            });
-
-            return {
-                mainLine:     mainLine,
-                relatedLines: relatedLines,
-            };
         },
 
         // ── init ──────────────────────────────────────────────────────────
@@ -1080,6 +967,29 @@ function productDetail() {
             if (!this.variants[idx]) return;
             this.activeVariant = idx;
             this._resolveImages();
+
+            var v = this.variants[idx];
+
+            // Update variant price adjustment
+            this.variantAdjustment = (typeof v.priceAdjustment === 'number') ? v.priceAdjustment : 0;
+
+            // Update stock to the selected variant's stock
+            if (typeof v.stock === 'number') {
+                this.stockQty = v.stock;
+            }
+
+            // Re-clamp qty to new variant's stock
+            if (this.stockQty <= 0) {
+                this.qty = 0;
+            } else if (this.qty > this.stockQty) {
+                // Step down to nearest valid qty at or below stock
+                this.qty = this.stockQty;
+                var offset = (this.qty - this.minQty) % this.qtyStep;
+                if (offset !== 0) this.qty -= offset;
+                if (this.qty < this.minQty) this.qty = this.minQty;
+            } else if (this.qty < this.minQty) {
+                this.qty = this.stockQty >= this.minQty ? this.minQty : 0;
+            }
         },
 
         prevImage: function() {
@@ -1103,8 +1013,8 @@ function productDetail() {
             if (prev >= this.minQty) this.qty = prev;
         },
 
-        // validateQty: call before submitting to ensure qty is within valid bounds
         validateQty: function() {
+            if (this.stockQty <= 0) return false;
             if (this.qty < this.minQty)   this.qty = this.minQty;
             if (this.qty > this.stockQty) this.qty = this.stockQty;
             var offset = (this.qty - this.minQty) % this.qtyStep;
@@ -1114,12 +1024,9 @@ function productDetail() {
         },
 
         // ── add-ons ───────────────────────────────────────────────────────
-        // selectedAddOns holds full catalog product objects so cartPayload
-        // has every field it needs — no extra lookup required.
         isAddOnSelected: function(id) {
             return this.selectedAddOns.some(function(a) { return a.id === id; });
         },
-        // toggleAddOn: takes only id — resolves full object from window.__pdp.addOns
         toggleAddOn: function(id) {
             if (this.isAddOnSelected(id)) {
                 this.selectedAddOns = this.selectedAddOns.filter(function(a) { return a.id !== id; });
@@ -1135,24 +1042,69 @@ function productDetail() {
 
         // ── cart actions ──────────────────────────────────────────────────
         addToCart: function() {
+            if (this.isAdding) return;
             if (this.stockQty <= 0) return;
             if (!this.validateQty()) return;
-            var payload = this.cartPayload;
-            // Livewire: this.$wire.addToCart(payload)
-            // fetch('/cart/add', {
-            //     method: 'POST',
-            //     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
-            //     body: JSON.stringify(payload)
-            // }).then(r => r.json()).then(function(data) { /* handle */ })
-            console.log('addToCart payload:', JSON.stringify(payload, null, 2));
-            window.dispatchEvent(new CustomEvent('cart:open'));
+
+            this.isAdding = true;
+            var self = this;
+            var d = window.__pdp || {};
+            var v = this.variants[this.activeVariant] || null;
+            var unitPrice = this.basePrice + this.variantAdjustment;
+
+            // Add main product
+            Alpine.store('cart').addItem({
+                product_id:      d.id,
+                slug:            d.slug,
+                name:            d.name,
+                category:        d.category,
+                selling_method:  d.sellingMethod,
+                unit_label:      d.unitLabel || '',
+                length_unit:     d.lengthUnit || null,
+                units_per_order: d.unitsPerOrder || 1,
+                min_quantity:    d.minQty,
+                quantity_step:   d.qtyStep,
+                loom_size:       d.loomSize,
+                quantity:        this.qty,
+                unit_price:      unitPrice,
+                selected_variant: v ? { id: v.id, color: v.color, hex: v.hex } : null,
+                image:           this.selectedImage,
+                stock_quantity:  this.stockQty,
+            });
+
+            // Add selected add-ons as separate cart lines
+            this.selectedAddOns.forEach(function(ao) {
+                Alpine.store('cart').addItem({
+                    product_id:      ao.id,
+                    slug:            ao.slug || '',
+                    name:            ao.name,
+                    category:        ao.category || '',
+                    selling_method:  ao.sellingMethod || 'per-piece',
+                    unit_label:      ao.unitLabel || '',
+                    length_unit:     ao.lengthUnit || null,
+                    units_per_order: ao.unitsPerOrder || 1,
+                    min_quantity:    ao.minQuantity || 1,
+                    quantity_step:   ao.quantityStep || 1,
+                    loom_size:       ao.loomSize || null,
+                    quantity:        ao.minQuantity || 1,
+                    unit_price:      ao.price,
+                    selected_variant: null,
+                    image:           ao.image || '',
+                    stock_quantity:  ao.stockQuantity || 0,
+                });
+            });
+
+            window.dispatchEvent(new CustomEvent('toast:show', { detail: { message: d.name + ' added to cart', type: 'success' } }));
+            setTimeout(function() { self.isAdding = false; }, 1000);
         },
         buyNow: function() {
+            if (this.isBuying) return;
             if (this.stockQty <= 0) return;
             if (!this.validateQty()) return;
-            var payload = this.cartPayload;
-            // Livewire: this.$wire.buyNow(payload)
-            console.log('buyNow payload:', JSON.stringify(payload, null, 2));
+
+            this.isBuying = true;
+            this.addToCart();
+            window.location.href = '/checkout';
         },
     };
 }

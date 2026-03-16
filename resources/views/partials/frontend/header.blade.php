@@ -52,6 +52,18 @@
             }
         },
 
+        // currencyList: built from the shared store so it always matches DB-seeded currencies.
+        // Falls back to the 7 default codes if the store isn't ready yet.
+        get currencyList() {
+            var flagMap = { NGN:'🇳🇬', USD:'🇺🇸', GBP:'🇬🇧', EUR:'🇪🇺', CAD:'🇨🇦', GHS:'🇬🇭', CFA:'🌍' };
+            if (!Alpine.store('currency') || !Alpine.store('currency').rates) {
+                return Object.entries(flagMap).map(function([code, flag]) { return { code: code, flag: flag }; });
+            }
+            return Object.keys(Alpine.store('currency').rates).map(function(code) {
+                return { code: code, flag: flagMap[code] || '💱' };
+            });
+        },
+
         init() {
             window.addEventListener('scroll', () => {
                 this.scrolled = window.scrollY > 50;
@@ -236,7 +248,7 @@
                 </div>
 
                 {{-- Shop --}}
-                <a href="{{ url('/shop') }}"
+                <a href="{{ route('shop.index') }}"
                    :class="bg ? 'text-gray-800 hover:text-black' : 'text-white hover:text-white/80'"
                    class="relative px-3 py-2 text-[12px] tracking-[0.4px] font-normal transition-colors duration-200 group whitespace-nowrap">
                     Shop
@@ -358,19 +370,16 @@
                                 opacity-0 invisible pointer-events-none
                                 group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto group-hover:mt-[5px]
                                 transition-all duration-300 z-50">
-                        @foreach([
-                            ['NGN','🇳🇬'],['USD','🇺🇸'],['GBP','🇬🇧'],
-                            ['CAD','🇨🇦'],['EUR','🇪🇺'],['GHS','🇬🇭'],['CFA','🌍'],
-                        ] as [$code, $flag])
+                        <template x-for="opt in currencyList" :key="opt.code">
                         <button
-                            @click="changeCurrency('{{ $code }}')"
-                            :class="selectedCurrency === '{{ $code }}' ? 'text-black font-semibold bg-gray-50' : 'text-gray-600'"
+                            @click="changeCurrency(opt.code)"
+                            :class="selectedCurrency === opt.code ? 'text-black font-semibold bg-gray-50' : 'text-gray-600'"
                             class="w-full flex items-center gap-2 px-4 py-2 text-[13px] text-left hover:text-black hover:bg-gray-50 transition-colors duration-150 bg-transparent border-none cursor-pointer"
                         >
-                            <span>{{ $flag }}</span>
-                            <span>{{ $code }}</span>
+                            <span x-text="opt.flag"></span>
+                            <span x-text="opt.code"></span>
                         </button>
-                        @endforeach
+                        </template>
                     </div>
                 </div>
 
@@ -453,11 +462,13 @@
                         <path stroke="currentColor" stroke-width="1.2" d="M7.889 19.71a.65.65 0 1 1 .722 1.08.65.65 0 0 1-.722-1.08ZM16.889 19.71a.65.65 0 1 1 .722 1.08.65.65 0 0 1-.722-1.08Z"/>
                     </svg>
                     {{-- Cart count badge --}}
-                    <span class="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center
+                    <span x-show="$store.cart && $store.cart.item_count > 0"
+                          x-text="$store.cart ? $store.cart.item_count : 0"
+                          x-cloak
+                          class="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center
                                  rounded-full bg-black text-white text-[9px] font-bold leading-none
                                  ring-[1.5px]"
                           :class="bg ? 'ring-white' : 'ring-transparent'">
-                        0
                     </span>
                 </button>
 
@@ -670,19 +681,16 @@
     <div class="px-5 pt-4 pb-6 border-t border-gray-100">
         <p class="font-sans text-xs tracking-widest uppercase text-gray-400 mb-3">Currency</p>
         <div class="grid grid-cols-2 gap-2">
-            @foreach([
-                ['NGN','🇳🇬'],['USD','🇺🇸'],['GBP','🇬🇧'],
-                ['CAD','🇨🇦'],['EUR','🇪🇺'],['GHS','🇬🇭'],['CFA','🌍'],
-            ] as [$code, $flag])
+            <template x-for="opt in currencyList" :key="opt.code">
             <button
-                @click="changeCurrency('{{ $code }}')"
-                :class="selectedCurrency === '{{ $code }}' ? 'border-black text-black font-semibold' : 'border-gray-200 text-gray-600'"
+                @click="changeCurrency(opt.code)"
+                :class="selectedCurrency === opt.code ? 'border-black text-black font-semibold' : 'border-gray-200 text-gray-600'"
                 class="flex items-center gap-2 px-3 py-2 border rounded text-[13px] hover:border-black hover:text-black transition-colors bg-transparent cursor-pointer"
             >
-                <span>{{ $flag }}</span>
-                <span>{{ $code }}</span>
+                <span x-text="opt.flag"></span>
+                <span x-text="opt.code"></span>
             </button>
-            @endforeach
+            </template>
         </div>
     </div>
 

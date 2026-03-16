@@ -18,8 +18,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     {{-- Alpine.js --}}
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-
+    
     <style>
         /* Fonts loaded via Google Fonts — Plus Jakarta Sans & Manrope */
 
@@ -96,6 +95,23 @@
                 mobileToggle() { this.mobileOpen = !this.mobileOpen; },
                 mobileClose() { this.mobileOpen = false; },
             });
+
+            // Toast notification manager
+            Alpine.data('adminToastManager', () => ({
+                toasts: [],
+                addToast({ type = 'success', message = '' }) {
+                    const id = Date.now() + Math.random();
+                    this.toasts.push({ id, type, message, visible: true });
+                    setTimeout(() => this.dismiss(id), 4000);
+                },
+                dismiss(id) {
+                    const t = this.toasts.find(x => x.id === id);
+                    if (t) {
+                        t.visible = false;
+                        setTimeout(() => { this.toasts = this.toasts.filter(x => x.id !== id); }, 300);
+                    }
+                },
+            }));
         });
 
         // Prevent flash of wrong theme
@@ -108,6 +124,8 @@
     </script>
 
     @stack('styles')
+
+    @livewireStyles
 </head>
 
 <body class="h-full overflow-hidden bg-gray-50 dark:bg-[#0a0c10] text-gray-900 dark:text-white antialiased">
@@ -157,7 +175,7 @@
             {{-- Header --}}
             @include('partials.admin.header')
 
-            @include('admin.partials.media-picker')
+            <livewire:admin.media.media-picker />
 
             {{-- Page content --}}
             <main class="admin-content flex-1 overflow-y-auto transition-colors duration-200">
@@ -169,6 +187,54 @@
         </div>
     </div>
 
+    {{-- ════════════════════════════════════════════════════
+         TOAST NOTIFICATIONS (listens for Livewire dispatch: toast)
+    ════════════════════════════════════════════════════ --}}
+    <div
+        x-data="adminToastManager()"
+        @toast.window="addToast($event.detail)"
+        class="fixed top-4 right-4 z-[10000] flex flex-col gap-2 pointer-events-none"
+        style="max-width:20rem;">
+        <template x-for="toast in toasts" :key="toast.id">
+            <div
+                x-show="toast.visible"
+                x-transition:enter="transition ease-out duration-300"
+                x-transition:enter-start="opacity-0 translate-x-4"
+                x-transition:enter-end="opacity-100 translate-x-0"
+                x-transition:leave="transition ease-in duration-200"
+                x-transition:leave-start="opacity-100 translate-x-0"
+                x-transition:leave-end="opacity-0 translate-x-4"
+                class="pointer-events-auto flex items-start gap-3 px-4 py-3 shadow-xl min-w-[260px]"
+                :class="{
+                    'bg-neutral-900 dark:bg-neutral-50 text-neutral-50 dark:text-neutral-900': toast.type === 'success',
+                    'bg-red-600 text-white': toast.type === 'error',
+                    'bg-yellow-500 text-white': toast.type === 'warning',
+                    'bg-blue-600 text-white': toast.type === 'info',
+                }">
+                <div class="flex-shrink-0 mt-0.5">
+                    <template x-if="toast.type === 'success'">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    </template>
+                    <template x-if="toast.type === 'error'">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </template>
+                    <template x-if="toast.type === 'warning'">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    </template>
+                    <template x-if="toast.type === 'info'">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </template>
+                </div>
+                <p class="text-sm font-medium leading-5 flex-1" x-text="toast.message"></p>
+                <button @click="dismiss(toast.id)" class="flex-shrink-0 ml-1 opacity-60 hover:opacity-100 transition-opacity">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+        </template>
+    </div>
+
     @stack('scripts')
+
+    @livewireScripts
 </body>
 </html>

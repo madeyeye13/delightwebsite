@@ -119,7 +119,7 @@
                 </div>
 
                 {{-- Items --}}
-                <template x-for="(item, index) in $store.cart.items" :key="item.product_id + '-' + index">
+                <template x-for="(item, index) in $store.cart.items" :key="(item.cart_line_id || item.product_id) + '-' + index">
                     <div class="py-6 border-b border-neutral-100 dark:border-neutral-800 space-y-5">
 
                         {{-- ── ITEM ROW ─────────────────────────────────────── --}}
@@ -145,7 +145,9 @@
                                            x-text="item.name"></a>
 
                                         {{-- Category --}}
-                                        <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 uppercase tracking-wider" x-text="item.category"></p>
+                                        <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
+                                            <span x-text="item.category"></span><template x-if="item.subcategory"><span> · <span x-text="item.subcategory"></span></span></template>
+                                        </p>
 
                                         {{-- Variant / Color --}}
                                         <div x-show="item.selected_variant && item.selected_variant.color" class="flex items-center gap-1.5 pt-0.5">
@@ -157,7 +159,7 @@
 
                                         {{-- Unit price --}}
                                         <p class="font-sans text-xs text-neutral-400 dark:text-neutral-500 pt-0.5">
-                                            &#8358;<span x-text="item.unit_price.toLocaleString()"></span>
+                                            <span x-text="$store.currency ? $store.currency.format(item.unit_price) : '₦' + item.unit_price.toLocaleString()"></span>
                                             &nbsp;/&nbsp;<span x-text="item.unit_label || 'unit'"></span>
                                         </p>
                                     </div>
@@ -198,7 +200,7 @@
 
                                     {{-- Line total --}}
                                     <span class="font-display text-sm font-bold text-neutral-900 dark:text-white ml-auto">
-                                        &#8358;<span x-text="$store.cart.lineTotal(item).toLocaleString()"></span>
+                                        <span x-text="$store.currency ? $store.currency.format($store.cart.lineTotal(item)) : '₦' + $store.cart.lineTotal(item).toLocaleString()"></span>
                                     </span>
 
                                     {{-- Remove (desktop) --}}
@@ -231,7 +233,7 @@
                                         </button>
                                     </div>
                                     <span class="font-display text-sm font-bold text-neutral-900 dark:text-white ml-auto">
-                                        &#8358;<span x-text="$store.cart.lineTotal(item).toLocaleString()"></span>
+                                        <span x-text="$store.currency ? $store.currency.format($store.cart.lineTotal(item)) : '₦' + $store.cart.lineTotal(item).toLocaleString()"></span>
                                     </span>
                                 </div>
                             </div>
@@ -353,19 +355,45 @@
                         </div>
 
                         {{-- ── ADD-ONS ──────────────────────────────────────── --}}
-                        <template x-if="item.add_ons && item.add_ons.length > 0">
+                        <template x-if="item.added_add_ons && item.added_add_ons.length > 0">
                             <div class="ml-0 sm:ml-[116px] space-y-2">
                                 <p class="font-sans text-2xs font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">Selected Add-ons</p>
                                 <div class="space-y-1.5">
-                                    <template x-for="ao in item.add_ons" :key="ao.id">
-                                        <div class="flex items-center justify-between py-1.5 border-b border-neutral-100 dark:border-neutral-800 last:border-0">
-                                            <div class="flex items-center gap-2">
-                                                <span class="w-1 h-1 rounded-full bg-brand flex-shrink-0"></span>
-                                                <span class="font-sans text-xs text-neutral-600 dark:text-neutral-400" x-text="ao.name"></span>
+                                    <template x-for="(ao, aoIndex) in item.added_add_ons" :key="ao.product_id">
+                                        <div class="flex items-center justify-between py-2 border-b border-neutral-100 dark:border-neutral-800 last:border-0 gap-3">
+                                            <div class="flex items-center gap-3 min-w-0 flex-1">
+                                                <div class="flex-shrink-0 w-[40px] h-[50px] bg-neutral-50 dark:bg-neutral-900 overflow-hidden">
+                                                    <img :src="ao.image" :alt="ao.name" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/40x50/F3F3F3/A3A3A3?text=+'" />
+                                                </div>
+                                                <div class="min-w-0">
+                                                    <p class="font-sans text-2xs font-semibold uppercase tracking-wider text-brand dark:text-brand-300 mb-0.5">Add-on</p>
+                                                    <p class="font-sans text-xs text-neutral-700 dark:text-neutral-300 line-clamp-1" x-text="ao.name"></p>
+                                                    <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">
+                                                        <span x-text="ao.category"></span><template x-if="ao.subcategory"><span> · <span x-text="ao.subcategory"></span></span></template>
+                                                    </p>
+                                                </div>
                                             </div>
-                                            <span class="font-sans text-xs font-medium text-neutral-600 dark:text-neutral-400">
-                                                +&#8358;<span x-text="ao.price.toLocaleString()"></span>
-                                            </span>
+                                            <div class="flex items-center gap-3 flex-shrink-0">
+                                                <div class="flex items-center border border-neutral-200 dark:border-neutral-700">
+                                                    <button @click="$store.cart.decreaseAddonQty(index, aoIndex)" :disabled="ao.quantity <= (ao.min_quantity || 1)"
+                                                            class="w-7 h-7 flex items-center justify-center text-neutral-500 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                                                        <svg viewBox="0 0 24 24" fill="none" class="w-2.5 h-2.5"><path d="M5 12h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                                                    </button>
+                                                    <span x-text="ao.quantity" class="w-8 text-center font-sans text-2xs font-semibold text-neutral-900 dark:text-white select-none"></span>
+                                                    <button @click="$store.cart.increaseAddonQty(index, aoIndex)"
+                                                            class="w-7 h-7 flex items-center justify-center text-neutral-500 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+                                                        <svg viewBox="0 0 24 24" fill="none" class="w-2.5 h-2.5"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                                                    </button>
+                                                </div>
+                                                <span class="font-sans text-xs font-medium text-neutral-700 dark:text-neutral-300 w-20 text-right">
+                                                    <span x-text="$store.currency ? $store.currency.format(ao.unit_price * ao.quantity) : '₦' + (ao.unit_price * ao.quantity).toLocaleString()"></span>
+                                                </span>
+                                                <button @click="$store.cart.removeAddon(index, aoIndex)"
+                                                        class="w-5 h-5 flex items-center justify-center text-neutral-300 dark:text-neutral-600 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                                                        aria-label="Remove add-on">
+                                                    <svg viewBox="0 0 24 24" fill="none" class="w-3 h-3"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                                                </button>
+                                            </div>
                                         </div>
                                     </template>
                                 </div>
@@ -409,7 +437,7 @@
                                 Subtotal (<span x-text="$store.cart.item_count"></span> <span x-text="$store.cart.item_count === 1 ? 'item' : 'items'"></span>)
                             </span>
                             <span class="font-sans text-xs font-medium text-neutral-800 dark:text-neutral-200">
-                                &#8358;<span x-text="$store.cart.items_subtotal.toLocaleString()"></span>
+                                <span x-text="$store.currency ? $store.currency.format($store.cart.items_subtotal) : '₦' + $store.cart.items_subtotal.toLocaleString()"></span>
                             </span>
                         </div>
 
@@ -417,7 +445,7 @@
                         <div x-show="$store.cart.add_ons_total > 0" class="flex items-center justify-between">
                             <span class="font-sans text-xs text-neutral-500 dark:text-neutral-400">Add-ons</span>
                             <span class="font-sans text-xs font-medium text-neutral-800 dark:text-neutral-200">
-                                +&#8358;<span x-text="$store.cart.add_ons_total.toLocaleString()"></span>
+                                <span x-text="$store.currency ? '+' + $store.currency.format($store.cart.add_ons_total) : '+₦' + $store.cart.add_ons_total.toLocaleString()"></span>
                             </span>
                         </div>
 
@@ -432,7 +460,7 @@
                             <div class="flex items-center justify-between">
                                 <span class="font-sans text-xs font-semibold uppercase tracking-wide text-neutral-900 dark:text-white">Estimated Total</span>
                                 <span class="font-display text-lg font-bold text-neutral-900 dark:text-white">
-                                    &#8358;<span x-text="$store.cart.cart_total.toLocaleString()"></span>
+                                    <span x-text="$store.currency ? $store.currency.format($store.cart.cart_total) : '₦' + $store.cart.cart_total.toLocaleString()"></span>
                                 </span>
                             </div>
                         </div>

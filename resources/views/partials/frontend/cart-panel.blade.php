@@ -17,67 +17,33 @@
 document.addEventListener('alpine:init', () => {
 
     // ══════════════════════════════════════════════════════════════════════
-    // CURRENCY STORE
-    // Single source of truth for currency across every component on the page.
-    //
-    // Architecture:
-    //   • active    — the currently selected currency code (e.g. 'USD')
-    //   • rates     — NGN is always base (1.0). All rates are NGN → foreign.
-    //                 Hardcoded now. When backend is ready:
-    //                   Alpine.store('currency').rates = apiResponse.rates;
-    //                   Alpine.store('currency').markup = userMarkup; // e.g. 1.5 = 50% markup
-    //                 Nothing else needs to change.
-    //   • markup    — multiplier applied ON TOP of the conversion rate.
-    //                 Default 1.0 (no markup). Backend sets this per-currency later.
-    //                 e.g. if rate is 0.00065 USD/NGN and markup is 1.5:
-    //                      $10 NGN × 0.00065 × 1.5 = $0.00975 USD shown to buyer.
-    //   • symbols   — display symbol for each currency code.
-    //   • convert() — converts a raw NGN amount using rate × markup.
-    //   • format()  — convert + format with symbol + locale string.
-    //                 This is the ONLY function price displays should call.
+    // CURRENCY STORE — rates served from DB via CurrencyService
+    // NGN is always the base (1.0). All prices are stored as integer NGN.
     // ══════════════════════════════════════════════════════════════════════
+    @php
+        $currencyData = app(\App\Services\CurrencyService::class)->getAlpineStoreData();
+    @endphp
+
     Alpine.store('currency', {
 
-        active: 'NGN',
+        active: @js($currencyData['active']),
 
-        // ── Hardcoded rates (NGN as base = 1) ────────────────────────────
-        // BACKEND SWAP: replace this object with your API/DB response.
-        // Shape must stay: { CODE: Number } where Number = how many CODE per 1 NGN.
-        // e.g. 1 NGN = 0.00065 USD  →  USD: 0.00065
-        rates: {
-            NGN: 1,
-            USD: 0.00065,   // ≈ ₦1,538/USD
-            GBP: 0.00051,   // ≈ ₦1,960/GBP
-            CAD: 0.00088,   // ≈ ₦1,136/CAD
-            EUR: 0.00060,   // ≈ ₦1,666/EUR
-            GHS: 0.0097,    // ≈ ₦103/GHS
-            CFA: 0.393,     // FCFA (West African franc, XOF/XAF) ≈ ₦2.55/CFA
-        },
+        // Rates: { CODE: Number } — how many CODE per 1 NGN
+        rates: @json($currencyData['rates']),
 
-        // ── Markup multiplier (1.0 = no markup) ──────────────────────────
-        // BACKEND SWAP: set this from your DB markup config per currency.
-        // e.g.  Alpine.store('currency').markup = { USD: 1.5, GBP: 1.4, ... }
-        // For now it's a flat scalar — when you're ready for per-currency
-        // markup just change markup to an object and update convert() below.
-        markup: 1.0,
+        // Per-currency markup multiplier (1.0 = no markup)
+        markup: @json($currencyData['markup']),
 
-        // ── Currency symbols ──────────────────────────────────────────────
-        symbols: {
-            NGN: '₦',
-            USD: '$',
-            GBP: '£',
-            CAD: 'CA$',
-            EUR: '€',
-            GHS: 'GH₵',
-            CFA: 'CFA',
-        },
+        // Currency symbols
+        symbols: @json($currencyData['symbols']),
 
         // ── convert: raw NGN amount → converted amount (Number) ───────────
-        // BACKEND MARKUP UPGRADE: when markup becomes per-currency, change to:
-        //   var m = (typeof this.markup === 'object') ? (this.markup[this.active] || 1) : this.markup;
         convert: function(ngnAmount) {
-            var rate = this.rates[this.active] || 1;
-            return ngnAmount * rate * this.markup;
+            var rate   = this.rates[this.active] || 1;
+            var markup = (typeof this.markup === 'object')
+                ? (this.markup[this.active] || 1)
+                : (this.markup || 1);
+            return ngnAmount * rate * markup;
         },
 
         // ── symbol: current currency symbol ──────────────────────────────
@@ -104,138 +70,8 @@ document.addEventListener('alpine:init', () => {
         open: false,
 
         // ── CART ITEMS ────────────────────────────────────────────────────────
-        // suggested_add_ons → real store products to upsell (buyer chooses freely)
-        // added_add_ons     → products buyer has actually added (starts empty)
-        //
-        // Replace mock with: @@json($cartItems) or Livewire payload later.
-        items: [
-            {
-                product_id:       1,
-                slug:             'premium-french-lace-fabric',
-                name:             'Premium French Lace Fabric',
-                category:         'Lace Fabrics',
-                selling_method:   'per-length',
-                unit_label:       'yards',
-                length_unit:      'yards',
-                units_per_order:  5,
-                min_quantity:     1,
-                quantity_step:    1,
-                loom_size:        null,
-                quantity:         2,
-                unit_price:       28500,
-                selected_variant: { color: 'Ivory White', hex: '#F5F0E8' },
-                image:            'https://placehold.co/80x100/F3F3F3/A3A3A3?text=Lace',
-
-                suggested_add_ons: [
-                    {
-                        product_id:      10,
-                        slug:            'matching-aso-oke-headtie',
-                        name:            'Matching Aso-oke Headtie',
-                        category:        'Aso-oke',
-                        selling_method:  'per-piece',
-                        unit_label:      'Piece',
-                        length_unit:     null,
-                        units_per_order: 1,
-                        min_quantity:    1,
-                        quantity_step:   1,
-                        loom_size:       null,
-                        unit_price:      8500,
-                        image:           'https://placehold.co/56x68/E6F3F2/1F6F67?text=Headtie',
-                    },
-                    {
-                        product_id:      11,
-                        slug:            'french-lace-lining-fabric',
-                        name:            'French Lace Lining Fabric',
-                        category:        'Plain & Solid',
-                        selling_method:  'per-length',
-                        unit_label:      'yards',
-                        length_unit:     'yards',
-                        units_per_order: 3,
-                        min_quantity:    1,
-                        quantity_step:   1,
-                        loom_size:       null,
-                        unit_price:      4200,
-                        image:           'https://placehold.co/56x68/F9F9F9/737373?text=Lining',
-                    },
-                ],
-
-                added_add_ons: [],
-            },
-            {
-                product_id:       2,
-                slug:             'handwoven-aso-oke-set',
-                name:             'Handwoven Aso-oke Set',
-                category:         'Aso-oke',
-                selling_method:   'per-set',
-                unit_label:       'Set',
-                length_unit:      null,
-                units_per_order:  1,
-                min_quantity:     1,
-                quantity_step:    1,
-                loom_size:        null,
-                quantity:         1,
-                unit_price:       65000,
-                selected_variant: { color: 'Royal Blue', hex: '#2C4A8F' },
-                image:            'https://placehold.co/80x100/F3F3F3/A3A3A3?text=Aso-oke',
-
-                suggested_add_ons: [
-                    {
-                        product_id:      12,
-                        slug:            'aso-oke-cap-mens',
-                        name:            "Men's Aso-oke Cap",
-                        category:        'Caps',
-                        selling_method:  'per-piece',
-                        unit_label:      'Cap',
-                        length_unit:     null,
-                        units_per_order: 1,
-                        min_quantity:    1,
-                        quantity_step:   1,
-                        loom_size:       null,
-                        unit_price:      5500,
-                        image:           'https://placehold.co/56x68/E6F3F2/1F6F67?text=Cap',
-                    },
-                ],
-
-                added_add_ons: [],
-            },
-            {
-                product_id:       3,
-                slug:             'ankara-print-bundle',
-                name:             'Ankara Mixed Print Bundle',
-                category:         'Ankara & Prints',
-                selling_method:   'per-bundle',
-                unit_label:       'Bundle',
-                length_unit:      null,
-                units_per_order:  1,
-                min_quantity:     1,
-                quantity_step:    1,
-                loom_size:        null,
-                quantity:         1,
-                unit_price:       18000,
-                selected_variant: null,
-                image:            'https://placehold.co/80x100/F3F3F3/A3A3A3?text=Ankara',
-
-                suggested_add_ons: [
-                    {
-                        product_id:      13,
-                        slug:            'plain-cotton-lining',
-                        name:            'Plain Cotton Lining Fabric',
-                        category:        'Plain & Solid',
-                        selling_method:  'per-length',
-                        unit_label:      'yards',
-                        length_unit:     'yards',
-                        units_per_order: 2,
-                        min_quantity:    1,
-                        quantity_step:   1,
-                        loom_size:       null,
-                        unit_price:      2800,
-                        image:           'https://placehold.co/56x68/F9F9F9/737373?text=Cotton',
-                    },
-                ],
-
-                added_add_ons: [],
-            },
-        ],
+        // Populated on mount by CartSync Livewire component via cart:initialized event.
+        items: [],
 
         // ── COMPUTED TOTALS ───────────────────────────────────────────────────
         get item_count() {
@@ -279,25 +115,65 @@ document.addEventListener('alpine:init', () => {
             return (item.unit_price * item.quantity) + aoSum;
         },
 
+        // ── ADD MAIN ITEM ─────────────────────────────────────────────────────
+        // Adds a product to the cart. If it already exists (same product_id + variant), bumps qty.
+        addItem: function(itemData) {
+            var variantId = itemData.selected_variant ? itemData.selected_variant.id : null;
+            var existing = this.items.find(function(i) {
+                var existingVid = i.selected_variant ? i.selected_variant.id : null;
+                return i.product_id === itemData.product_id && existingVid === variantId;
+            });
+            if (existing) {
+                existing.quantity += (itemData.quantity || itemData.min_quantity || 1);
+                if (existing.stock_quantity && existing.quantity > existing.stock_quantity) {
+                    existing.quantity = existing.stock_quantity;
+                }
+                this.open = true;
+                Livewire.dispatch('cart:update-qty', { productId: itemData.product_id, variantId: variantId, quantity: existing.quantity });
+                return;
+            }
+            var newItem = Object.assign({
+                cart_line_id: null,
+                subcategory: '',
+                stock_quantity: 0,
+                total_price: 0,
+                suggested_add_ons: [],
+                added_add_ons: [],
+                quantity: itemData.min_quantity || 1,
+            }, itemData);
+            newItem.total_price = (newItem.unit_price || 0) * newItem.quantity;
+            this.items.push(newItem);
+            this.open = true;
+            Livewire.dispatch('cart:add', { productId: itemData.product_id, variantId: variantId, quantity: newItem.quantity });
+        },
+
         // ── MAIN ITEM QUANTITY ────────────────────────────────────────────────
         increaseQty: function(index) {
             var item = this.items[index];
             if (!item) return;
-            item.quantity = item.quantity + (item.quantity_step || 1);
-            // Livewire: this.$wire.updateCartQty(item.product_id, item.quantity)
+            var step = item.quantity_step || 1;
+            if (item.stock_quantity && item.quantity + step > item.stock_quantity) return;
+            item.quantity = item.quantity + step;
+            Livewire.dispatch('cart:update-qty', { productId: item.product_id, variantId: item.selected_variant?.id ?? null, quantity: item.quantity });
         },
 
         decreaseQty: function(index) {
             var item = this.items[index];
             if (!item) return;
             var prev = item.quantity - (item.quantity_step || 1);
-            if (prev >= (item.min_quantity || 1)) item.quantity = prev;
+            if (prev >= (item.min_quantity || 1)) {
+                item.quantity = prev;
+                Livewire.dispatch('cart:update-qty', { productId: item.product_id, variantId: item.selected_variant?.id ?? null, quantity: item.quantity });
+            }
         },
 
         // ── REMOVE MAIN ITEM (removes its added add-ons too) ─────────────────
         removeItem: function(index) {
+            var item = this.items[index];
+            if (item) {
+                Livewire.dispatch('cart:remove', { productId: item.product_id, variantId: item.selected_variant?.id ?? null });
+            }
             this.items.splice(index, 1);
-            // Livewire: this.$wire.removeCartItem(productId)
         },
 
         // ── ADD-ON: ADD from suggestions ──────────────────────────────────────
@@ -312,26 +188,32 @@ document.addEventListener('alpine:init', () => {
 
             if (existing) {
                 existing.quantity += (suggestion.quantity_step || 1);
+                existing.total_price = existing.unit_price * existing.quantity;
                 return;
             }
 
+            var qty = suggestion.min_quantity || 1;
             item.added_add_ons.push({
+                cart_line_id:        null,
+                parent_cart_line_id: item.cart_line_id || null,
                 product_id:      suggestion.product_id,
                 slug:            suggestion.slug,
                 name:            suggestion.name,
-                category:        suggestion.category,
+                category:        suggestion.category || '',
+                subcategory:     suggestion.subcategory || '',
+                image:           suggestion.image,
                 selling_method:  suggestion.selling_method,
                 unit_label:      suggestion.unit_label,
                 length_unit:     suggestion.length_unit,
                 units_per_order: suggestion.units_per_order,
                 min_quantity:    suggestion.min_quantity,
                 quantity_step:   suggestion.quantity_step,
+                stock_quantity:  suggestion.stock_quantity || 0,
                 loom_size:       suggestion.loom_size,
                 unit_price:      suggestion.unit_price,
-                image:           suggestion.image,
-                quantity:        suggestion.min_quantity || 1,
+                quantity:        qty,
+                total_price:     (suggestion.unit_price || 0) * qty,
             });
-            // Livewire: this.$wire.addAddon(item.product_id, suggestion.product_id)
         },
 
         // Check if a suggestion has already been added
@@ -347,14 +229,20 @@ document.addEventListener('alpine:init', () => {
         increaseAddonQty: function(itemIndex, addonIndex) {
             var ao = this.items[itemIndex] && this.items[itemIndex].added_add_ons[addonIndex];
             if (!ao) return;
-            ao.quantity = ao.quantity + (ao.quantity_step || 1);
+            var step = ao.quantity_step || 1;
+            if (ao.stock_quantity && ao.quantity + step > ao.stock_quantity) return;
+            ao.quantity = ao.quantity + step;
+            ao.total_price = ao.unit_price * ao.quantity;
         },
 
         decreaseAddonQty: function(itemIndex, addonIndex) {
             var ao = this.items[itemIndex] && this.items[itemIndex].added_add_ons[addonIndex];
             if (!ao) return;
             var prev = ao.quantity - (ao.quantity_step || 1);
-            if (prev >= (ao.min_quantity || 1)) ao.quantity = prev;
+            if (prev >= (ao.min_quantity || 1)) {
+                ao.quantity = prev;
+                ao.total_price = ao.unit_price * ao.quantity;
+            }
         },
 
         // ── ADD-ON: REMOVE ────────────────────────────────────────────────────
@@ -370,6 +258,28 @@ document.addEventListener('alpine:init', () => {
 
     window.addEventListener('cart:open',  function() { Alpine.store('cart').openPanel();  });
     window.addEventListener('cart:close', function() { Alpine.store('cart').closePanel(); });
+
+    // ══════════════════════════════════════════════════════════════════════
+    // TOAST STORE — lightweight notification system
+    // ══════════════════════════════════════════════════════════════════════
+    Alpine.store('toast', {
+        visible: false,
+        message: '',
+        type: 'success',
+        _timer: null,
+        show: function(message, type) {
+            this.message = message;
+            this.type = type || 'success';
+            this.visible = true;
+            var self = this;
+            if (self._timer) clearTimeout(self._timer);
+            self._timer = setTimeout(function() { self.visible = false; }, 3000);
+        }
+    });
+
+    window.addEventListener('toast:show', function(e) {
+        Alpine.store('toast').show(e.detail.message, e.detail.type);
+    });
 });
 </script>
 
@@ -460,7 +370,7 @@ document.addEventListener('alpine:init', () => {
             x-show="$store.cart.items.length > 0"
             class="flex-1 overflow-y-auto overscroll-contain"
         >
-            <template x-for="(item, index) in $store.cart.items" :key="'item-' + item.product_id">
+            <template x-for="(item, index) in $store.cart.items" :key="'item-' + (item.cart_line_id || item.product_id)">
                 <div class="border-b border-neutral-100 dark:border-neutral-800">
 
                     {{-- ════════════════════════════════════════════════
@@ -484,7 +394,9 @@ document.addEventListener('alpine:init', () => {
                                        @click="$store.cart.closePanel()"
                                        class="font-display text-xs font-semibold text-neutral-900 dark:text-white hover:text-brand transition-colors line-clamp-2 leading-snug block"
                                        x-text="item.name"></a>
-                                    <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 uppercase tracking-wider" x-text="item.category"></p>
+                                    <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
+                                        <span x-text="item.category"></span><template x-if="item.subcategory"><span> · <span x-text="item.subcategory"></span></span></template>
+                                    </p>
                                     <div x-show="item.selected_variant && item.selected_variant.color" class="flex items-center gap-1.5 pt-0.5">
                                         <span :style="item.selected_variant ? 'background-color:' + item.selected_variant.hex : ''"
                                               class="w-2.5 h-2.5 border border-neutral-200 dark:border-neutral-700 flex-shrink-0"></span>
@@ -553,7 +465,8 @@ document.addEventListener('alpine:init', () => {
                                 </button>
                                 <span x-text="item.quantity" class="w-10 text-center font-sans text-xs font-semibold text-neutral-900 dark:text-white select-none"></span>
                                 <button @click="$store.cart.increaseQty(index)"
-                                        class="w-8 h-8 flex items-center justify-center text-neutral-500 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+                                        :disabled="item.stock_quantity && item.quantity >= item.stock_quantity"
+                                        class="w-8 h-8 flex items-center justify-center text-neutral-500 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
                                     <svg viewBox="0 0 24 24" fill="none" class="w-3 h-3"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
                                 </button>
                             </div>
@@ -591,7 +504,9 @@ document.addEventListener('alpine:init', () => {
                                                    @click="$store.cart.closePanel()"
                                                    class="font-display text-xs font-semibold text-neutral-800 dark:text-white hover:text-brand transition-colors line-clamp-1 block"
                                                    x-text="ao.name"></a>
-                                                <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500" x-text="ao.category"></p>
+                                                <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">
+                                                    <span x-text="ao.category"></span><template x-if="ao.subcategory"><span> · <span x-text="ao.subcategory"></span></span></template>
+                                                </p>
                                             </div>
                                             <button
                                                 @click="$store.cart.removeAddon(index, aoIndex)"
@@ -730,4 +645,36 @@ document.addEventListener('alpine:init', () => {
         </div>
 
     </aside>
+</div>
+
+{{-- ══════════════════════════════════════════════════════════════════════════
+     TOAST NOTIFICATION
+══════════════════════════════════════════════════════════════════════════════ --}}
+<div
+    x-data
+    x-cloak
+    x-show="$store.toast.visible"
+    x-transition:enter="transition ease-out duration-300"
+    x-transition:enter-start="opacity-0 translate-y-4"
+    x-transition:enter-end="opacity-100 translate-y-0"
+    x-transition:leave="transition ease-in duration-200"
+    x-transition:leave-start="opacity-100 translate-y-0"
+    x-transition:leave-end="opacity-0 translate-y-4"
+    class="fixed bottom-6 right-6 z-[9999] max-w-xs"
+    style="display:none"
+>
+    <div class="flex items-center gap-3 px-4 py-3 shadow-lg border"
+         :class="$store.toast.type === 'success'
+             ? 'bg-brand-50 dark:bg-brand-900/30 border-brand-200 dark:border-brand-700 text-brand-700 dark:text-brand-300'
+             : 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700 text-red-700 dark:text-red-300'">
+        <template x-if="$store.toast.type === 'success'">
+            <svg viewBox="0 0 24 24" fill="none" class="w-5 h-5 flex-shrink-0">
+                <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </template>
+        <span class="font-sans text-sm font-medium" x-text="$store.toast.message"></span>
+        <button @click="$store.toast.visible = false" class="ml-auto flex-shrink-0 opacity-60 hover:opacity-100 transition-opacity">
+            <svg viewBox="0 0 24 24" fill="none" class="w-4 h-4"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+    </div>
 </div>

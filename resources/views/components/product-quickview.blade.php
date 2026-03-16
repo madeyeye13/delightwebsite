@@ -38,6 +38,10 @@
             this.activeImage   = p.image || null;
             this.isOpen        = true;
             document.body.style.overflow = 'hidden';
+            // Set initial image from first variant if available
+            if (p.variants && p.variants.length && Array.isArray(p.variants[0].images) && p.variants[0].images.length) {
+                this.activeImage = p.variants[0].images[0];
+            }
         },
         close() {
             this.isOpen = false;
@@ -47,31 +51,58 @@
         get currentVariant() {
             return (this.product.variants && this.product.variants[this.activeVariant]) || null;
         },
+        get currentStock() {
+            const v = this.currentVariant;
+            if (v && typeof v.stock === 'number') return v.stock;
+            return this.product.stockQuantity || 0;
+        },
         get allImages() {
-            var imgs = [];
+            const v = this.product.variants && this.product.variants[this.activeVariant];
+            const variantImgs = (v && Array.isArray(v.images)) ? v.images : [];
+            
+            if (variantImgs.length) return variantImgs;
+            
+            // Fall back to product-level images
+            const imgs = [];
             if (this.product.image) imgs.push(this.product.image);
             if (Array.isArray(this.product.images)) {
-                this.product.images.forEach(function(i){ if(imgs.indexOf(i)===-1) imgs.push(i); });
+                this.product.images.forEach(i => { if (!imgs.includes(i)) imgs.push(i); });
             }
-            if (this.currentVariant && Array.isArray(this.currentVariant.images)) {
-                var self = imgs;
-                this.currentVariant.images.forEach(function(i){ if(self.indexOf(i)===-1) self.push(i); });
-            }
-            return imgs;
+            return imgs.length ? imgs : [];
         },
         switchVariant(idx) {
             this.activeVariant = idx;
-            var v = this.product.variants && this.product.variants[idx];
+            const v = this.product.variants && this.product.variants[idx];
             if (v && Array.isArray(v.images) && v.images.length) {
                 this.activeImage = v.images[0];
+            } else if (this.product.image) {
+                this.activeImage = this.product.image;
             }
+            // Re-clamp qty to selected variant stock
+            if (this.qty > this.currentStock) this.qty = Math.max(this.product.minQuantity || 1, this.currentStock);
         },
         addToCart() {
-            console.log('Quick add:', {
-                product: this.product,
-                variant: this.currentVariant,
-                qty:     this.qty
+            var v = this.currentVariant;
+            Alpine.store('cart').addItem({
+                product_id:      this.product.id,
+                slug:            this.product.slug || '',
+                name:            this.product.name || '',
+                category:        this.product.category || '',
+                selling_method:  this.product.sellingMethod || 'per-piece',
+                unit_label:      this.product.unit || '',
+                units_per_order: this.product.unitsPerOrder || 1,
+                min_quantity:    this.product.minQuantity || 1,
+                quantity_step:   this.product.quantityStep || 1,
+                loom_size:       null,
+                quantity:        this.qty,
+                unit_price:      this.product.price || 0,
+                selected_variant: v ? { id: v.id, color: v.color, hex: v.hex } : null,
+                image:           this.activeImage || this.product.image || '',
+                stock_quantity:  this.currentStock,
+                suggested_add_ons: [],
+                added_add_ons:   []
             });
+            window.dispatchEvent(new CustomEvent('toast:show', { detail: { message: this.product.name + ' added to cart', type: 'success' } }));
         }
     }"
     @open-quickview.window="open($event.detail)"
@@ -178,18 +209,18 @@
 
                     {{-- Stock badge --}}
                     <div class="flex items-center justify-between gap-3 flex-wrap">
-                        <template x-if="product.stockQuantity > 10">
+                        <template x-if="currentStock > 10">
                             <span class="inline-flex items-center gap-1.5 font-sans text-2xs font-semibold tracking-wide uppercase px-2.5 py-1 bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-300 border border-brand-200 dark:border-brand-500/20">
                                 <span class="w-1.5 h-1.5 rounded-full bg-brand flex-shrink-0"></span>In Stock
                             </span>
                         </template>
-                        <template x-if="product.stockQuantity > 0 && product.stockQuantity <= 10">
+                        <template x-if="currentStock > 0 && currentStock <= 10">
                             <span class="inline-flex items-center gap-1.5 font-sans text-2xs font-semibold tracking-wide uppercase px-2.5 py-1 bg-accent-50 dark:bg-accent-500/10 text-accent-600 dark:text-accent-300 border border-accent-200 dark:border-accent-500/20">
                                 <span class="w-1.5 h-1.5 rounded-full bg-accent-400 animate-pulse flex-shrink-0"></span>
-                                Only <span x-text="product.stockQuantity" class="mx-0.5"></span> left
+                                Only <span x-text="currentStock" class="mx-0.5"></span> left
                             </span>
                         </template>
-                        <template x-if="product.stockQuantity === 0">
+                        <template x-if="currentStock === 0">
                             <span class="inline-flex items-center gap-1.5 font-sans text-2xs font-semibold tracking-wide uppercase px-2.5 py-1 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20">
                                 <span class="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0"></span>Out of Stock
                             </span>
@@ -255,8 +286,8 @@
                             <div>
                                 <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 uppercase tracking-wider leading-none mb-0.5">Availability</p>
                                 <p class="font-sans text-xs font-medium"
-                                   :class="product.stockQuantity === 0 ? 'text-red-500' : product.stockQuantity <= 10 ? 'text-accent-600 dark:text-accent-400' : 'text-brand'"
-                                   x-text="product.stockQuantity === 0 ? 'Unavailable' : product.stockQuantity <= 10 ? product.stockQuantity + ' remaining' : 'Available'">
+                                   :class="currentStock === 0 ? 'text-red-500' : currentStock <= 10 ? 'text-accent-600 dark:text-accent-400' : 'text-brand'"
+                                   x-text="currentStock === 0 ? 'Unavailable' : currentStock <= 10 ? currentStock + ' remaining' : 'Available'">
                                 </p>
                             </div>
                         </div>
@@ -312,7 +343,7 @@
                     </div>
 
                     {{-- ── QUANTITY ──────────────────────────────────────── --}}
-                    <div x-show="product.stockQuantity > 0" class="space-y-3">
+                    <div x-show="currentStock > 0" class="space-y-3">
                         <div class="flex items-center gap-4">
                             <span class="font-sans text-xs font-semibold tracking-wider uppercase text-neutral-500 dark:text-neutral-400 w-20 flex-shrink-0">Quantity</span>
                             <div class="flex items-center border border-neutral-200 dark:border-neutral-700">
@@ -325,34 +356,90 @@
                                 </button>
                                 <span x-text="qty" class="w-12 text-center font-sans text-sm font-semibold text-neutral-900 dark:text-white select-none"></span>
                                 <button
-                                    @click="qty = Math.min(product.stockQuantity, qty + (product.quantityStep || 1))"
-                                    :disabled="qty >= product.stockQuantity"
+                                    @click="qty = Math.min(currentStock, qty + (product.quantityStep || 1))"
+                                    :disabled="qty >= currentStock"
                                     class="w-10 h-10 flex items-center justify-center text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                                 >
                                     <svg viewBox="0 0 24 24" fill="none" class="w-3.5 h-3.5"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
                                 </button>
                             </div>
-                            <span x-show="qty >= product.stockQuantity" class="font-sans text-2xs text-accent-600 dark:text-accent-400 font-medium">Max reached</span>
-                            <span x-show="qty < product.stockQuantity && product.stockQuantity <= 10"
+                            <span x-show="qty >= currentStock" class="font-sans text-2xs text-accent-600 dark:text-accent-400 font-medium">Max reached</span>
+                            <span x-show="qty < currentStock && currentStock <= 10"
                                   class="font-sans text-2xs text-neutral-400 dark:text-neutral-500"
-                                  x-text="(product.stockQuantity - qty) + ' left'"></span>
+                                  x-text="(currentStock - qty) + ' left'"></span>
                         </div>
 
-                        {{-- Order mini-summary --}}
-                        <div class="bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-100 dark:border-neutral-800 px-4 py-3 flex items-center justify-between flex-wrap gap-3">
-                            <span class="font-sans text-xs text-neutral-500 dark:text-neutral-400">
-                                <span class="font-semibold text-neutral-800 dark:text-white" x-text="qty"></span>
-                                &times; <span x-text="product.unit || 'unit'"></span>
-                            </span>
-                            <span class="font-sans text-xs text-neutral-500 dark:text-neutral-400">
-                                Total: <span class="font-semibold text-neutral-800 dark:text-white">&#8358;<span x-text="((product.price || 0) * qty).toLocaleString()"></span></span>
-                            </span>
+                        {{-- Order summary — adapts to selling method --}}
+                        <div class="bg-brand-50 dark:bg-brand-900/20 border border-brand-100 dark:border-brand-800/40 px-4 py-3 space-y-2">
+                            <p class="font-sans text-xs text-brand-700 dark:text-brand-300 font-medium">You're Getting</p>
+
+                            <div class="flex items-center justify-between gap-3">
+                                {{-- LEFT: Unit count --}}
+                                <div class="text-center min-w-0">
+                                    <p class="font-display text-lg font-bold text-brand-700 dark:text-brand-200" x-text="qty"></p>
+                                    <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider" x-text="qty === 1 ? 'Unit' : 'Units'"></p>
+                                </div>
+
+                                {{-- CENTER: Selling method detail --}}
+                                <template x-if="product.sellingMethod === 'per-length' && (product.unitsPerOrder || 0) > 0">
+                                    <div class="flex-1 text-center min-w-0">
+                                        <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider mb-0.5" x-text="'Total ' + (product.lengthUnit || product.unit || 'Yards')"></p>
+                                        <p class="font-display text-lg font-bold text-brand-700 dark:text-brand-200">
+                                            <span x-text="qty * (product.unitsPerOrder || 1)"></span>
+                                            <span class="text-sm font-semibold" x-text="product.lengthUnit || product.unit || 'yards'"></span>
+                                        </p>
+                                    </div>
+                                </template>
+
+                                <template x-if="product.sellingMethod === 'per-loom' && product.loomSize">
+                                    <div class="flex-1 text-center min-w-0">
+                                        <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider mb-0.5">Loom Size</p>
+                                        <p class="font-display text-sm font-bold text-brand-700 dark:text-brand-200" x-text="product.loomSize"></p>
+                                    </div>
+                                </template>
+
+                                <template x-if="product.sellingMethod === 'per-set' && product.setContents && product.setContents.length">
+                                    <div class="flex-1 text-center min-w-0">
+                                        <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider mb-0.5" x-text="'Per ' + (product.unit || 'set') + ' contains'"></p>
+                                        <template x-for="sc in product.setContents" :key="sc.name">
+                                            <p class="font-sans text-xs text-brand-700 dark:text-brand-300">
+                                                <span x-text="sc.name"></span> &times; <span x-text="qty * (sc.quantity || 1)"></span>
+                                            </p>
+                                        </template>
+                                    </div>
+                                </template>
+
+                                <template x-if="product.sellingMethod === 'per-bundle' && product.bundleYield && product.bundleYield.length">
+                                    <div class="flex-1 text-center min-w-0">
+                                        <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider mb-0.5" x-text="'Per ' + (product.unit || 'bundle') + ' gives you'"></p>
+                                        <template x-for="by in product.bundleYield" :key="by.name">
+                                            <p class="font-sans text-xs text-brand-700 dark:text-brand-300">
+                                                <span x-text="by.name"></span> &times; <span x-text="qty * (by.quantity || 1)"></span>
+                                            </p>
+                                        </template>
+                                    </div>
+                                </template>
+
+                                <template x-if="product.sellingMethod === 'per-piece' || (!product.sellingMethod || (product.sellingMethod !== 'per-length' && product.sellingMethod !== 'per-loom' && product.sellingMethod !== 'per-set' && product.sellingMethod !== 'per-bundle'))">
+                                    <div class="flex-1 text-center min-w-0">
+                                        <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider mb-0.5">Sold As</p>
+                                        <p class="font-display text-sm font-bold text-brand-700 dark:text-brand-200" x-text="product.unit || 'Piece'"></p>
+                                    </div>
+                                </template>
+
+                                {{-- RIGHT: Total price --}}
+                                <div class="text-right min-w-0">
+                                    <p class="font-display text-lg font-bold text-brand-700 dark:text-brand-200"
+                                       x-text="$store.currency ? $store.currency.format((product.price || 0) * qty) : '₦' + ((product.price || 0) * qty).toLocaleString()"></p>
+                                    <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider">Total Price</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
                     {{-- ── CTA BUTTONS ──────────────────────────────────── --}}
                     <div class="flex flex-row gap-3">
-                        <template x-if="product.stockQuantity > 0">
+                        <template x-if="currentStock > 0">
                             <div class="flex flex-row gap-3 w-full">
                                 <button
                                     @click="addToCart(); close()"
@@ -369,7 +456,7 @@
                                 </a>
                             </div>
                         </template>
-                        <template x-if="product.stockQuantity === 0">
+                        <template x-if="currentStock === 0">
                             <div class="flex flex-row gap-3 w-full">
                                 <button disabled class="flex-1 inline-flex items-center justify-center px-4 py-3.5 bg-neutral-200 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 font-sans text-sm font-semibold tracking-wide cursor-not-allowed">
                                     Out of Stock

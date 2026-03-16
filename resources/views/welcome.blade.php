@@ -409,6 +409,6 @@
     
    
 @include('partials.frontend.marquee-collection')
-@include('partials.frontend.featured-products')
+<livewire:frontend.featured-products />
 
 @endsection

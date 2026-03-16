@@ -279,29 +279,42 @@ $products = [
             @foreach($products as $product)
 
             <article
-                class="product-item flex-shrink-0 w-[260px] sm:w-[280px] md:w-[300px] group"
-                aria-label="{{ $product['name'] }}"
-            >
-                {{-- ── Image ───────────────────────────────── --}}
-                <div class="relative overflow-hidden w-full aspect-[3/4] bg-gray-50 dark:bg-white/[0.03]">
-                    <img
-                        src="{{ asset($product['image']) }}"
-                        alt="{{ $product['name'] }}"
-                        class="w-full h-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-[1.04]"
-                        loading="lazy"
-                        width="300"
-                        height="400"
-                    />
-
-                    @if($product['badge'])
-                    <span class="absolute top-3 left-3 font-sans text-[10px] font-semibold tracking-[0.12em] uppercase
-                                 px-2 py-1
-                                 {{ $product['badge'] === 'Sale'
-                                     ? 'bg-black text-white dark:bg-white dark:text-black'
-                                     : 'bg-white text-black dark:bg-black dark:text-white border border-gray-200 dark:border-white/10' }}">
-                        {{ $product['badge'] }}
-                    </span>
-                    @endif
+    x-data="{
+        activeVariant: 0,
+        get currentImage() {
+            const v = {{ json_encode($product['variants']) }};
+            const fb = '{{ $product['image'] }}';
+            if (v.length && v[this.activeVariant]?.images?.length) {
+                return v[this.activeVariant].images[0];
+            }
+            return fb;
+        }
+    }"
+    class="product-item flex-shrink-0 w-[260px] sm:w-[280px] md:w-[300px] group"
+>
+    <div class="relative overflow-hidden w-full aspect-[3/4] bg-gray-50 dark:bg-white/[0.03]">
+        <img
+            :src="currentImage"
+            alt="{{ $product['name'] }}"
+            class="w-full h-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+            loading="lazy"
+        />
+        {{-- badge --}}
+    </div>
+    {{-- Color swatches if variants exist --}}
+    @if(!empty($product['variants']))
+    <div class="flex gap-1.5 mt-2">
+        @foreach($product['variants'] as $vi => $variant)
+        <button
+            @click="activeVariant = {{ $vi }}"
+            :class="activeVariant === {{ $vi }} ? 'ring-2 ring-brand ring-offset-1' : 'ring-1 ring-neutral-200'"
+            class="w-4 h-4 rounded-full transition-all"
+            style="background-color: {{ $variant['hex'] }}"
+            title="{{ $variant['color'] }}"
+        ></button>
+        @endforeach
+    </div>
+    @endif
                 </div>
 
                 {{-- ── Product info ─────────────────────────── --}}

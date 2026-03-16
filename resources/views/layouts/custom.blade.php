@@ -22,8 +22,7 @@
         <div class="min-h-screen bg-gray-100">
             @include('partials.frontend.cart-panel')
             @include('partials.frontend.header', ['alwaysShowHeaderBg' => $alwaysShowHeaderBg ?? false])
-
-        
+            <livewire:frontend.cart-sync />
 
             <!-- Page Content -->
             <main>
