@@ -177,7 +177,7 @@ class CartSync extends Component
     private function buildAlpineItems(Cart $cart): array
     {
         return $cart->items
-            ->load('product.media', 'product.sellingMethod', 'product.category.parent', 'variant.media')
+            ->load('product.media', 'product.sellingMethod', 'product.category.parent', 'variant.media', 'product.addOns.media', 'product.addOns.sellingMethod', 'product.addOns.category')
             ->map(function (CartItem $item): array {
                 $product = $item->product;
                 if (! $product) {
@@ -241,7 +241,29 @@ class CartSync extends Component
                     ] : null,
                     'unit_price' => $unitPrice,
                     'total_price' => $unitPrice * $item->quantity,
-                    'suggested_add_ons' => [],
+                    'suggested_add_ons' => $product->show_add_ons_in_cart
+                        ? $product->addOns->map(function (Product $addOn): array {
+                            $addOnUnitLabel = $addOn->unit_label ?: ucfirst(str_replace('per-', '', $addOn->sellingMethod?->config_type ?? 'piece'));
+
+                            return [
+                                'product_id' => $addOn->id,
+                                'slug' => $addOn->slug,
+                                'name' => $addOn->name,
+                                'category' => $addOn->category?->name ?? '',
+                                'subcategory' => '',
+                                'image' => $addOn->thumb_image_url ?? '',
+                                'selling_method' => str_replace('_', '-', $addOn->sellingMethod?->config_type ?? 'per-piece'),
+                                'unit_label' => $addOnUnitLabel,
+                                'length_unit' => $addOn->length_unit,
+                                'units_per_order' => $addOn->units_per_order,
+                                'min_quantity' => $addOn->min_quantity,
+                                'quantity_step' => $addOn->quantity_step,
+                                'stock_quantity' => $addOn->effective_stock,
+                                'loom_size' => $addOn->loom_size,
+                                'unit_price' => $addOn->final_price,
+                            ];
+                        })->values()->toArray()
+                        : [],
                     'added_add_ons' => [],
                 ];
             })

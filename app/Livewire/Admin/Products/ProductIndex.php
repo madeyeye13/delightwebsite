@@ -66,6 +66,8 @@ class ProductIndex extends Component
                 'price' => $p->price ?? 0,
                 'stock' => $p->effective_stock,
                 'stockUnit' => $p->stock_unit ?? 'units',
+                'weight' => $p->weight,
+                'weightUnit' => $p->weight_unit ?? 'kg',
                 'status' => $p->status ?? 'draft',
                 'featured' => (bool) $p->featured,
                 'addOns' => 0,

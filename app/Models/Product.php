@@ -43,6 +43,8 @@ class Product extends Model implements HasMedia
         'discount_type',
         'discount_value',
         'cost',
+        'weight',
+        'weight_unit',
         'track_inventory',
         'stock_quantity',
         'stock_unit',
@@ -69,6 +71,7 @@ class Product extends Model implements HasMedia
             'compare_price' => 'integer',
             'discount_value' => 'integer',
             'cost' => 'integer',
+            'weight' => 'float',
             'track_inventory' => 'boolean',
             'show_add_ons_after_checkout' => 'boolean',
             'show_add_ons_in_cart' => 'boolean',
@@ -257,6 +260,7 @@ class Product extends Model implements HasMedia
                 'images' => $variantImages,
                 'stock' => $variant->stock,
                 'priceAdjustment' => $variant->price_adjustment,
+                'weight' => $variant->weight,
             ];
         })->values()->toArray();
 
@@ -314,6 +318,10 @@ class Product extends Model implements HasMedia
             'images' => $images,
             'variants' => $variants,
             'addOns' => $addOns,
+            'weight' => $this->weight,
+            'weightUnit' => $this->weight_unit ?? 'kg',
+            'metaTitle' => $this->meta_title ?? '',
+            'metaDescription' => $this->meta_description ?? '',
         ];
     }
 }

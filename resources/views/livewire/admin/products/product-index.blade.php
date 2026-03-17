@@ -383,6 +383,11 @@
                                     <p class="text-neutral-600 dark:text-neutral-400"><strong>Stock:</strong> <span x-text="product.stock + ' ' + product.stockUnit"></span></p>
                                     <p class="text-neutral-600 dark:text-neutral-400"><strong>Status:</strong> <span :class="product.status === 'active' ? 'text-green-600 dark:text-green-400' : product.status === 'draft' ? 'text-yellow-600 dark:text-yellow-400' : 'text-neutral-600 dark:text-neutral-400'" x-text="product.status"></span></p>
                                 </div>
+                                <template x-if="product.weight">
+                                    <div class="col-span-2">
+                                        <p class="text-neutral-600 dark:text-neutral-400"><strong>Weight:</strong> <span x-text="product.weight + ' ' + (product.weightUnit || 'kg')"></span></p>
+                                    </div>
+                                </template>
                             </div>
                             <p class="text-xs text-neutral-500 dark:text-neutral-400 mb-2" x-text="'Updated ' + product.updated"></p>
                             <div x-data="{ open: false }" class="relative" @click.away="open = false">

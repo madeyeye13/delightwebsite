@@ -13,6 +13,10 @@ class CurrencyService
 {
     const BASE_CURRENCY = 'NGN';
 
+    /**
+     * Default supported currencies (used as fallback reference).
+     * The authoritative list is the `currencies` table — see getSupportedCodes().
+     */
     const SUPPORTED_CURRENCIES = ['NGN', 'USD', 'GBP', 'EUR', 'GHS', 'ZAR', 'CAD'];
 
     const IP_API_URL = 'https://ip-api.com/json';
@@ -129,12 +133,26 @@ class CurrencyService
     }
 
     /**
-     * Set currency for authenticated user.
-     * Stores in DB and clears cache.
+     * Get all active currency codes from the database.
+     * This is the authoritative list — new currencies created in the admin
+     * are automatically included.
+     *
+     * @return array<string>
+     */
+    public function getSupportedCodes(): array
+    {
+        return Cache::remember('currency_supported_codes', now()->addMinutes(self::CACHE_DURATION_MINUTES), function () {
+            return Currency::active()->pluck('code')->all();
+        });
+    }
+
+    /**
+     * Set currency for authenticated user or guest.
+     * Stores in DB for auth users, always saves to session.
      */
     public function setUserCurrency(string $currencyCode, ?User $user = null): void
     {
-        if (! in_array($currencyCode, self::SUPPORTED_CURRENCIES)) {
+        if (! in_array($currencyCode, $this->getSupportedCodes())) {
             $currencyCode = self::BASE_CURRENCY;
         }
 
@@ -148,6 +166,10 @@ class CurrencyService
             Cache::forget("user_currency_{$user->id}");
             Log::info("Currency updated for user {$user->id}: {$currencyCode}");
         }
+
+        // Always persist to session — covers guests and acts as a fast-path
+        // fallback for authenticated users on the same request.
+        $this->setCurrencyInSession($currencyCode);
     }
 
     /**
@@ -155,7 +177,7 @@ class CurrencyService
      */
     public function setCurrencyInSession(string $currencyCode): void
     {
-        if (in_array($currencyCode, self::SUPPORTED_CURRENCIES)) {
+        if (in_array($currencyCode, $this->getSupportedCodes())) {
             session(['user_currency' => $currencyCode]);
         }
     }
@@ -318,15 +340,20 @@ class CurrencyService
     /**
      * Return the currency config array for Alpine store injection.
      * Shape: { active, rates, markup, symbols }
-     * Cached for 60 minutes to avoid DB query on every request.
+     *
+     * rates/markup/symbols are cached for 60 minutes (shared across all users).
+     * active is resolved per-request from the user's session/DB preference so
+     * that switching currencies always survives a page refresh.
      *
      * @return array{active: string, rates: array<string, float>, markup: array<string, float>, symbols: array<string, string>}
      */
     public function getAlpineStoreData(): array
     {
+        // Per-user — never cached globally.
         $userCurrency = $this->getUserCurrency();
 
-        return Cache::remember('currency_store_data', now()->addMinutes(self::CACHE_DURATION_MINUTES), function () use ($userCurrency) {
+        // Static data shared across users — safe to cache.
+        $static = Cache::remember('currency_store_data', now()->addMinutes(self::CACHE_DURATION_MINUTES), function () {
             $currencies = Currency::active()
                 ->with('latestRate')
                 ->get();
@@ -337,17 +364,20 @@ class CurrencyService
 
             foreach ($currencies as $currency) {
                 $rates[$currency->code] = (float) ($currency->latestRate?->rate ?? 1.0);
+                // markup is an additive amount in the foreign currency (0 = no markup)
                 $markups[$currency->code] = (float) $currency->markup;
                 $symbols[$currency->code] = $currency->symbol;
             }
 
-            return [
-                'active' => $userCurrency,
-                'rates' => $rates,
-                'markup' => $markups,
-                'symbols' => $symbols,
-            ];
+            return compact('rates', 'markups', 'symbols');
         });
+
+        return [
+            'active' => $userCurrency,
+            'rates' => $static['rates'],
+            'markup' => $static['markups'],
+            'symbols' => $static['symbols'],
+        ];
     }
 
     /**
@@ -370,20 +400,15 @@ class CurrencyService
             $data = $response->json();
             $rates = $data['rates'] ?? [];
 
-            foreach (self::SUPPORTED_CURRENCIES as $currencyCode) {
-                if ($currencyCode === self::BASE_CURRENCY) {
-                    continue;
-                }
-
-                if (isset($rates[$currencyCode])) {
-                    $currency = Currency::where('code', $currencyCode)->first();
-                    if ($currency) {
-                        $currency->exchangeRates()->create([
-                            'rate' => $rates[$currencyCode],
-                            'fetched_at' => now(),
-                        ]);
-                        Log::info("Updated {$currencyCode} rate: {$rates[$currencyCode]}");
-                    }
+            // Use DB currencies so newly admin-created currencies get rates too.
+            $dbCurrencies = Currency::where('code', '!=', self::BASE_CURRENCY)->get();
+            foreach ($dbCurrencies as $currency) {
+                if (isset($rates[$currency->code])) {
+                    $currency->exchangeRates()->create([
+                        'rate' => $rates[$currency->code],
+                        'fetched_at' => now(),
+                    ]);
+                    Log::info("Updated {$currency->code} rate: {$rates[$currency->code]}");
                 }
             }
 
@@ -400,9 +425,14 @@ class CurrencyService
     public function clearCache(): void
     {
         Cache::forget('currency_store_data');
-        foreach (self::SUPPORTED_CURRENCIES as $currency) {
-            Cache::forget("currency_markup_{$currency}");
-            Cache::forget("currency_symbol_{$currency}");
+        Cache::forget('currency_supported_codes');
+
+        $codes = Currency::pluck('code')->all();
+        foreach ($codes as $code) {
+            Cache::forget("currency_markup_{$code}");
+            Cache::forget("currency_symbol_{$code}");
+            Cache::forget("exchange_rate_NGN_{$code}");
+            Cache::forget("exchange_rate_{$code}_NGN");
         }
     }
 }

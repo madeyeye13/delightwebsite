@@ -46,16 +46,25 @@
         },
 
         changeCurrency(code) {
-            // Write to the shared store — every component on the page reacts instantly.
+            // Update the shared store instantly — every component reacts.
             if (Alpine.store('currency')) {
                 Alpine.store('currency').active = code;
             }
+            // Persist to session/DB so the choice survives a page refresh.
+            fetch('/currency/set', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ code: code })
+            });
         },
 
         // currencyList: built from the shared store so it always matches DB-seeded currencies.
-        // Falls back to the 7 default codes if the store isn't ready yet.
+        // Falls back to the 8 default codes if the store isn't ready yet.
         get currencyList() {
-            var flagMap = { NGN:'🇳🇬', USD:'🇺🇸', GBP:'🇬🇧', EUR:'🇪🇺', CAD:'🇨🇦', GHS:'🇬🇭', CFA:'🌍' };
+            var flagMap = { NGN:'🇪🇳', USD:'🇺🇸', GBP:'🇬🇧', EUR:'🇪🇺', CAD:'🇨🇦', GHS:'🇬🇭', ZAR:'🇿🇦', CFA:'🌍' };
             if (!Alpine.store('currency') || !Alpine.store('currency').rates) {
                 return Object.entries(flagMap).map(function([code, flag]) { return { code: code, flag: flag }; });
             }

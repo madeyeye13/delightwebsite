@@ -17,6 +17,7 @@ class ProductVariant extends Model implements HasMedia
         'name',
         'hex',
         'price_adjustment',
+        'weight',
         'stock',
         'stock_unit',
         'is_default',
@@ -28,6 +29,7 @@ class ProductVariant extends Model implements HasMedia
         return [
             'is_default' => 'boolean',
             'price_adjustment' => 'integer',
+            'weight' => 'float',
             'stock' => 'integer',
         ];
     }

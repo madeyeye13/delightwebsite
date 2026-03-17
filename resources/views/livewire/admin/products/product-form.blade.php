@@ -83,6 +83,7 @@
     window.__productFormData = {
         categories: {!! $categoriesJson !!},
         sellingMethods: {!! $sellingMethodsJson !!},
+        products: {!! $productsJson !!},
         product: {!! $productJson !!},
     };
 </script>
@@ -943,7 +944,6 @@
                                         </div>
                                     </div>
 
-                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <div>
                                             <label class="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">Stock Quantity</label>
                                             <input type="number" x-model.number="variant.stock" placeholder="0" @input="updateAggregatedStock()" class="w-full px-2 py-1.5 border border-neutral-300 dark:border-neutral-700 rounded text-sm text-neutral-900 dark:text-neutral-50 dark:bg-neutral-900">
@@ -951,6 +951,17 @@
                                         <div>
                                             <label class="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">Stock Unit <span class="text-neutral-400 font-normal">(auto-synced)</span></label>
                                             <input type="text" x-model="variant.stockUnit" :placeholder="getStockUnitPlaceholder()" readonly class="w-full px-2 py-1.5 border border-neutral-300 dark:border-neutral-700 rounded text-sm text-neutral-900 dark:text-neutral-50 dark:bg-neutral-900 opacity-75">
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">Variant Weight <span class="text-neutral-400 font-normal">(optional — overrides product weight)</span></label>
+                                            <div class="flex gap-2">
+                                                <input type="number" x-model="variant.weight" placeholder="e.g. 0.5" min="0" step="0.001" class="flex-1 px-2 py-1.5 border border-neutral-300 dark:border-neutral-700 rounded text-sm text-neutral-900 dark:text-neutral-50 dark:bg-neutral-900">
+                                                <span class="flex items-center px-2 py-1.5 border border-neutral-300 dark:border-neutral-700 rounded text-xs text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800" x-text="form.weightUnit || 'kg'"></span>
+                                            </div>
+                                            <p class="text-2xs text-neutral-400 dark:text-neutral-500 mt-0.5">Leave blank to use product-level weight</p>
                                         </div>
                                     </div>
 
@@ -1165,6 +1176,50 @@
             </div>
 
             {{-- ════════════════════════════════════════════════════════
+                 SHIPPING & WEIGHT (COLLAPSIBLE)
+            ════════════════════════════════════════════════════════════ --}}
+            <div class="bg-neutral-50 dark:bg-[#1a2332] rounded-lg border border-neutral-200 dark:border-neutral-800">
+                <button @click="sections.shipping = !sections.shipping" class="w-full px-5 py-3 flex items-center justify-between hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-5 h-5 text-brand dark:text-brand-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0v10a2 2 0 01-2 2H6a2 2 0 01-2-2V7m8 4v10m0-10l-8-4"/></svg>
+                        <div class="flex items-center gap-2">
+                            <h3 class="font-semibold text-neutral-900 dark:text-neutral-50">Shipping &amp; Weight</h3>
+                            <span class="text-xs text-neutral-500 dark:text-neutral-400">(optional)</span>
+                        </div>
+                        <template x-if="form.weight">
+                            <span class="text-xs bg-brand/10 text-brand dark:text-brand-300 px-2 py-0.5 rounded-full font-medium" x-text="form.weight + ' ' + (form.weightUnit || 'kg')"></span>
+                        </template>
+                    </div>
+                    <svg class="w-4 h-4 text-neutral-600 dark:text-neutral-400 transition-transform" :class="sections.shipping && 'rotate-180'" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+                </button>
+                <div x-show="sections.shipping" class="border-t border-neutral-200 dark:border-neutral-800 px-5 py-4 space-y-3">
+                    <p class="text-xs text-neutral-500 dark:text-neutral-400">Used for shipping calculations (e.g. DHL, courier services). Variants can override this weight individually.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">Product Weight</label>
+                            <input type="number" x-model="form.weight" placeholder="e.g. 0.5" min="0" step="0.001" class="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-lg text-neutral-900 dark:text-neutral-50 dark:bg-neutral-900 text-sm">
+                            <p class="text-xs text-neutral-400 dark:text-neutral-500 mt-1">Leave blank if not applicable</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">Weight Unit</label>
+                            <select x-model="form.weightUnit" class="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-lg text-neutral-900 dark:text-neutral-50 dark:bg-neutral-900 text-sm">
+                                <option value="kg">kg — Kilograms</option>
+                                <option value="g">g — Grams</option>
+                                <option value="lbs">lbs — Pounds</option>
+                                <option value="oz">oz — Ounces</option>
+                            </select>
+                        </div>
+                    </div>
+                    <template x-if="form.colorVariants.length > 0">
+                        <div class="p-3 bg-blue-50 dark:bg-blue-500/10 rounded-lg text-xs text-blue-900 dark:text-blue-300">
+                            <p class="font-medium">Per-variant weights</p>
+                            <p class="mt-0.5">You can set a different weight per color variant in the Color Variants section above. A variant with no weight set will use this product-level weight.</p>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            {{-- ════════════════════════════════════════════════════════
                  RECOMMENDED ADD-ONS (COLLAPSIBLE) — unchanged
             ════════════════════════════════════════════════════════════ --}}
             <div class="bg-neutral-50 dark:bg-[#1a2332] rounded-lg border border-neutral-200 dark:border-neutral-800">
@@ -1177,29 +1232,70 @@
                 </button>
                 <div x-show="sections.addOns" class="border-t border-neutral-200 dark:border-neutral-800 px-5 py-4 space-y-4">
                     <div class="relative">
-                        <input type="text" x-model="addOnSearch" @input="filterAddOns()" placeholder="Search for products to add..." class="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-lg text-neutral-900 dark:text-neutral-50 dark:bg-neutral-900 text-sm">
-                        <div x-show="addOnSearch && filteredAddOns.length > 0" class="absolute top-full left-0 right-0 mt-1 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto custom-scrollbar">
+                        <div class="relative">
+                            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/></svg>
+                            <input type="text" x-model="addOnSearch" @input="filterAddOns()" @keydown.escape="addOnSearch = ''; filteredAddOns = []" placeholder="Search existing products by name or category..." class="w-full pl-9 pr-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-lg text-neutral-900 dark:text-neutral-50 dark:bg-neutral-900 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand">
+                        </div>
+                        {{-- Dropdown results --}}
+                        <div x-show="addOnSearch.trim() && filteredAddOns.length > 0" @click.outside="addOnSearch = ''; filteredAddOns = []" class="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-xl z-20 max-h-60 overflow-y-auto custom-scrollbar">
                             <template x-for="addon in filteredAddOns" :key="addon.id">
-                                <button @click="addAddOn(addon)" class="w-full text-left px-3 py-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 last:border-b-0 text-xs">
-                                    <p class="font-medium text-neutral-900 dark:text-neutral-50" x-text="addon.name"></p>
-                                    <p class="text-neutral-600 dark:text-neutral-400" x-text="'₦' + addon.price.toLocaleString()"></p>
+                                <button @click="addAddOn(addon)" type="button" class="w-full text-left px-3 py-2.5 hover:bg-neutral-50 dark:hover:bg-neutral-800 border-b border-neutral-100 dark:border-neutral-800 last:border-b-0 flex items-center gap-3 transition-colors">
+                                    <div class="w-9 h-11 flex-shrink-0 bg-neutral-100 dark:bg-neutral-800 rounded overflow-hidden">
+                                        <template x-if="addon.image">
+                                            <img :src="addon.image" :alt="addon.name" class="w-full h-full object-cover">
+                                        </template>
+                                        <template x-if="!addon.image">
+                                            <div class="w-full h-full flex items-center justify-center text-neutral-300 dark:text-neutral-600">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                            </div>
+                                        </template>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-medium text-neutral-900 dark:text-neutral-50 truncate" x-text="addon.name"></p>
+                                        <div class="flex items-center gap-2 mt-0.5">
+                                            <template x-if="addon.category">
+                                                <span class="text-2xs bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 px-1.5 py-0.5 rounded" x-text="addon.category"></span>
+                                            </template>
+                                            <span class="text-xs text-brand dark:text-brand-300 font-medium" x-text="'₦' + addon.price.toLocaleString()"></span>
+                                        </div>
+                                    </div>
+                                    <svg class="w-4 h-4 text-brand dark:text-brand-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
                                 </button>
                             </template>
                         </div>
+                        {{-- No results state --}}
+                        <div x-show="addOnSearch.trim() && filteredAddOns.length === 0" class="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-xl z-20 px-4 py-3 text-center">
+                            <p class="text-xs text-neutral-500 dark:text-neutral-400">No matching products found</p>
+                        </div>
                     </div>
                     <div class="space-y-2">
-                        <template x-for="(addon, idx) in form.addOns" :key="idx">
-                            <div class="flex items-center justify-between p-2 bg-neutral-100 dark:bg-neutral-900 rounded-lg">
-                                <div>
-                                    <p class="text-sm font-medium text-neutral-900 dark:text-neutral-50" x-text="addon.name"></p>
-                                    <p class="text-xs text-neutral-600 dark:text-neutral-400" x-text="'₦' + addon.price.toLocaleString()"></p>
+                        <template x-for="(addon, idx) in form.addOns" :key="addon.id">
+                            <div class="flex items-center gap-3 p-2 bg-neutral-100 dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800">
+                                <div class="w-8 h-10 flex-shrink-0 bg-neutral-200 dark:bg-neutral-800 rounded overflow-hidden">
+                                    <template x-if="addon.image">
+                                        <img :src="addon.image" :alt="addon.name" class="w-full h-full object-cover">
+                                    </template>
+                                    <template x-if="!addon.image">
+                                        <div class="w-full h-full flex items-center justify-center text-neutral-400 dark:text-neutral-600">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                        </div>
+                                    </template>
                                 </div>
-                                <button @click="removeAddOn(idx)" class="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300">
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-neutral-900 dark:text-neutral-50 truncate" x-text="addon.name"></p>
+                                    <div class="flex items-center gap-2">
+                                        <template x-if="addon.category">
+                                            <span class="text-2xs text-neutral-500 dark:text-neutral-400 truncate" x-text="addon.category"></span>
+                                        </template>
+                                        <span class="text-xs text-neutral-600 dark:text-neutral-400 font-medium" x-text="'₦' + addon.price.toLocaleString()"></span>
+                                    </div>
+                                </div>
+                                <button @click="removeAddOn(idx)" type="button" class="flex-shrink-0 text-neutral-400 dark:text-neutral-600 hover:text-red-600 dark:hover:text-red-400 transition-colors">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                 </button>
                             </div>
                         </template>
-                        <p x-show="form.addOns.length === 0" class="text-xs text-neutral-600 dark:text-neutral-400">No add-ons selected</p>
+                        <p x-show="form.addOns.length === 0" class="text-xs text-neutral-500 dark:text-neutral-400 text-center py-2">No add-ons selected yet. Search above to add products.</p>
                     </div>
                     <div class="border-t border-neutral-200 dark:border-neutral-800 pt-3 space-y-2">
                         <label class="flex items-center gap-2"><input type="checkbox" x-model="form.showAddOnsAfterCheckout" class="w-4 h-4"><span class="text-sm text-neutral-700 dark:text-neutral-300">Show after "Add to Cart" step</span></label>
@@ -1522,6 +1618,11 @@
                     </div>
 
                     <div>
+                        <p class="text-neutral-600 dark:text-neutral-400">Weight</p>
+                        <p class="font-medium text-neutral-900 dark:text-neutral-50" x-text="form.weight ? form.weight + ' ' + (form.weightUnit || 'kg') : '—'"></p>
+                    </div>
+
+                    <div>
                         <p class="text-neutral-600 dark:text-neutral-400">Badges</p>
                         <div class="flex gap-1 mt-0.5">
                             <template x-if="form.featured">
@@ -1677,20 +1778,16 @@ function productFormManager() {
             pricing: true,
             inventory: false,
             addOns: false,
+            shipping: false,
             coupons: false,
             seo: false,
             schemaPreview: false,
         },
 
-        mockAddOns: [
-            { id: 1, name: 'Gift Wrapping',       price: 2000 },
-            { id: 2, name: 'Express Delivery',    price: 5000 },
-            { id: 3, name: 'Matching Headtie',    price: 8000 },
-            { id: 4, name: 'Shoe Accessories Set', price: 6500 },
-            { id: 5, name: 'Storage Bag',         price: 3500 }
-        ],
+        allProducts: window.__productFormData?.products ?? [],
 
         filteredAddOns: [],
+        addOnSearchLoading: false,
 
         // ─────────────────────────────────────────────────────────
         // CATEGORY LINKED DROPDOWNS
@@ -1752,6 +1849,10 @@ function productFormManager() {
             stockUnit: '',
             lowStockThreshold: 5,
 
+            // Shipping
+            weight: '',
+            weightUnit: 'kg',
+
             // Add-ons
             addOns: [],
             showAddOnsAfterCheckout: false,
@@ -1776,7 +1877,6 @@ function productFormManager() {
         // INIT
         // ─────────────────────────────────────────────────────────
         init() {
-    this.filteredAddOns = [...this.mockAddOns];
     const saved = window.__productFormData?.product;
     if (saved) {
         Object.assign(this.form, saved);
@@ -2260,10 +2360,11 @@ function productFormManager() {
         // ADD-ONS
         // ─────────────────────────────────────────────────────────
         filterAddOns() {
-            if (!this.addOnSearch.trim()) { this.filteredAddOns = [...this.mockAddOns]; return; }
-            const q = this.addOnSearch.toLowerCase();
-            this.filteredAddOns = this.mockAddOns.filter(a =>
-                a.name.toLowerCase().includes(q) && !this.form.addOns.find(x => x.id === a.id)
+            const q = this.addOnSearch.trim().toLowerCase();
+            if (!q) { this.filteredAddOns = []; return; }
+            this.filteredAddOns = this.allProducts.filter(a =>
+                (a.name.toLowerCase().includes(q) || (a.category && a.category.toLowerCase().includes(q)))
+                && !this.form.addOns.find(x => x.id === a.id)
             );
         },
         addAddOn(addon) {
@@ -2486,6 +2587,7 @@ function productFormManager() {
                     name:             v.name,
                     hex:              v.hex,
                     price_adjustment: v.priceAdjustment,
+                    weight:           (v.weight !== '' && v.weight !== null && v.weight !== undefined) ? v.weight : null,
                     stock:            v.stock,
                     stock_unit:       v.stockUnit,
                     is_default:       i === this.form.defaultColorVariantIdx,
@@ -2509,6 +2611,10 @@ function productFormManager() {
                                         : this.form.stockQuantity,
                 stock_unit:         this.form.stockUnit,
                 low_stock_threshold: this.form.lowStockThreshold,
+
+                // Shipping & Weight
+                weight:             this.form.weight !== '' ? this.form.weight : null,
+                weight_unit:        this.form.weightUnit || 'kg',
 
                 // Add-ons
                 add_on_ids:                 this.form.addOns.map(a => a.id),

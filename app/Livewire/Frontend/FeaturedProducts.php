@@ -24,6 +24,7 @@ class FeaturedProducts extends Component
                     'hex' => $v->hex ?? '#cccccc',
                     'stock' => $v->stock,
                     'priceAdjustment' => $v->price_adjustment,
+                    'weight' => $v->weight,
                     'images' => array_filter([
                         $v->getFirstMediaUrl('variant_main', 'medium') ?: $v->getFirstMediaUrl('variant_main'),
                     ]),
@@ -62,6 +63,8 @@ class FeaturedProducts extends Component
                     'stockQuantity' => $product->effective_stock,
                     'minQuantity' => $product->min_quantity,
                     'quantityStep' => $product->quantity_step,
+                    'weight' => $product->weight,
+                    'weightUnit' => $product->weight_unit ?? 'kg',
                     'variants' => $variants,
                 ];
             })

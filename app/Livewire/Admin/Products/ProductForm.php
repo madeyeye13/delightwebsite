@@ -93,6 +93,7 @@ class ProductForm extends Component
             $this->handleImages($product, $payload);
             $this->handleVariants($product, $payload);
             $this->handleCoupons($product, $payload);
+            $this->handleAddOns($product, $payload);
 
             $this->dispatch('toast', type: 'success', message: $status === 'active' ? 'Product published!' : 'Draft saved.');
 
@@ -118,6 +119,18 @@ class ProductForm extends Component
         $categories = Category::active()->orderBy('sort_order')->get();
         $sellingMethods = SellingMethod::active()->get();
 
+        $products = Product::with(['category', 'media'])
+            ->when($this->product, fn ($q) => $q->where('id', '!=', $this->product->id))
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Product $p) => [
+                'id' => $p->id,
+                'name' => $p->name,
+                'price' => $p->price,
+                'category' => $p->category?->name ?? '',
+                'image' => $p->thumb_image_url,
+            ]);
+
         return view('livewire.admin.products.product-form', [
             'categoriesJson' => $categories->map(fn ($c) => [
                 'id' => $c->id,
@@ -136,6 +149,7 @@ class ProductForm extends Component
                 'isSystem' => (bool) $m->is_system,
                 'isActive' => (bool) $m->is_active,
             ])->toJson(),
+            'productsJson' => $products->toJson(),
             'productJson' => $this->product ? $this->buildEditPayload($this->product) : 'null',
         ]);
     }
@@ -182,6 +196,8 @@ class ProductForm extends Component
             'discount_type' => $payload['discount_type'] ?: null,
             'discount_value' => $payload['discount_value'] ?? 0,
             'cost' => $payload['cost'] ?? 0,
+            'weight' => isset($payload['weight']) && $payload['weight'] !== '' ? (float) $payload['weight'] : null,
+            'weight_unit' => $payload['weight_unit'] ?? 'kg',
             'track_inventory' => (bool) ($payload['track_inventory'] ?? false),
             'stock_quantity' => $payload['stock_quantity'] ?? 0,
             'stock_unit' => $payload['stock_unit'] ?? '',
@@ -196,6 +212,18 @@ class ProductForm extends Component
             'is_new_arrival' => (bool) ($payload['is_new_arrival'] ?? false),
             'new_arrival_expiry' => $payload['new_arrival_expiry'] ?: null,
         ];
+    }
+
+    /** @param  array<string, mixed>  $payload */
+    private function handleAddOns(Product $product, array $payload): void
+    {
+        $ids = collect($payload['add_on_ids'] ?? [])
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->toArray();
+
+        $product->addOns()->sync($ids);
     }
 
     /** @param  array<string, mixed>  $payload */
@@ -256,6 +284,7 @@ class ProductForm extends Component
                     'name' => $variantData['name'],   // ← was color_name
                     'hex' => $variantData['hex'] ?? '#000000',
                     'price_adjustment' => $variantData['price_adjustment'] ?? 0,
+                    'weight' => isset($variantData['weight']) && $variantData['weight'] !== '' ? (float) $variantData['weight'] : null,
                     'stock' => $variantData['stock'] ?? 0,   // ← was stock_quantity
                     'stock_unit' => $variantData['stock_unit'] ?? 'units',
                     'is_default' => $index === (int) ($payload['default_color_variant_idx'] ?? 0),
@@ -330,12 +359,14 @@ class ProductForm extends Component
     /** @return string JSON string of product data for Alpine form hydration */
     private function buildEditPayload(Product $product): string
     {
+        $product->loadMissing('addOns.category', 'addOns.media');
         $method = $product->sellingMethod;
 
         $variants = $product->variants()->with('media')->get()->map(fn ($v) => [
             'name' => $v->name,        // ← was color_name
             'hex' => $v->hex,
             'priceAdjustment' => $v->price_adjustment,
+            'weight' => $v->weight,
             'stock' => $v->stock,       // ← was stock_quantity
             'stockUnit' => $v->stock_unit,
             'mainImagePreview' => $v->getFirstMediaUrl('variant_main') ?: null,
@@ -395,6 +426,8 @@ class ProductForm extends Component
             'discountType' => $product->discount_type ?? '',
             'discountValue' => $product->discount_value,
             'cost' => $product->cost,
+            'weight' => $product->weight,
+            'weightUnit' => $product->weight_unit ?? 'kg',
             'trackInventory' => $product->track_inventory,
             'stockQuantity' => $product->stock_quantity,
             'stockUnit' => $product->stock_unit,
@@ -402,6 +435,13 @@ class ProductForm extends Component
             'showAddOnsAfterCheckout' => $product->show_add_ons_after_checkout,
             'showAddOnsInCart' => $product->show_add_ons_in_cart,
             'showAddOnsOnPage' => $product->show_add_ons_on_page,
+            'addOns' => $product->addOns->map(fn (Product $a) => [
+                'id' => $a->id,
+                'name' => $a->name,
+                'price' => $a->price,
+                'category' => $a->category?->name ?? '',
+                'image' => $a->thumb_image_url,
+            ])->toArray(),
             'coupons' => $coupons,
             'metaTitle' => $product->meta_title,
             'metaDescription' => $product->meta_description,

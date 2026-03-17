@@ -31,19 +31,23 @@ document.addEventListener('alpine:init', () => {
         // Rates: { CODE: Number } — how many CODE per 1 NGN
         rates: @json($currencyData['rates']),
 
-        // Per-currency markup multiplier (1.0 = no markup)
+        // Per-currency additive markup in the foreign currency (0.0 = no markup)
+        // e.g. markup['USD'] = 4 means add $4 to every USD price after conversion
         markup: @json($currencyData['markup']),
 
         // Currency symbols
         symbols: @json($currencyData['symbols']),
 
         // ── convert: raw NGN amount → converted amount (Number) ───────────
+        // Formula: (amount × rate) + additive_markup
+        // For NGN no conversion needed; markup is always 0 for base currency.
         convert: function(ngnAmount) {
+            if (this.active === 'NGN') { return ngnAmount; }
             var rate   = this.rates[this.active] || 1;
             var markup = (typeof this.markup === 'object')
-                ? (this.markup[this.active] || 1)
-                : (this.markup || 1);
-            return ngnAmount * rate * markup;
+                ? (this.markup[this.active] || 0)
+                : 0;
+            return (ngnAmount * rate) + markup;
         },
 
         // ── symbol: current currency symbol ──────────────────────────────
@@ -251,6 +255,15 @@ document.addEventListener('alpine:init', () => {
             // Livewire: this.$wire.removeAddon(item.product_id, addonProductId)
         },
 
+        // ── SUGGESTION: DISMISS (hide from "you might also like") ─────────────
+        dismissSuggestion: function(itemIndex, productId) {
+            var item = this.items[itemIndex];
+            if (!item) return;
+            item.suggested_add_ons = item.suggested_add_ons.filter(function(s) {
+                return s.product_id !== productId;
+            });
+        },
+
         // ── OPEN / CLOSE ──────────────────────────────────────────────────────
         openPanel:  function() { this.open = true;  document.body.style.overflow = 'hidden'; },
         closePanel: function() { this.open = false; document.body.style.overflow = '';       },
@@ -423,16 +436,29 @@ document.addEventListener('alpine:init', () => {
                         {{-- Selling method summary --}}
                         <div class="bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-100 dark:border-neutral-800 px-3 py-2">
                             <template x-if="item.selling_method === 'per-length'">
-                                <div class="flex items-center gap-4 flex-wrap">
-                                    <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">Sold per <span class="font-medium text-neutral-600 dark:text-neutral-300" x-text="item.units_per_order + ' ' + item.length_unit"></span></span>
-                                    <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">Qty: <span class="font-medium text-neutral-600 dark:text-neutral-300" x-text="item.quantity + (item.quantity === 1 ? ' unit' : ' units')"></span></span>
-                                    <span class="font-sans text-2xs font-semibold text-brand dark:text-brand-300"><span x-text="$store.cart.totalFabric(item)"></span>&nbsp;<span x-text="item.length_unit"></span> total</span>
+                                <div class="space-y-1.5">
+                                    <div class="flex items-center justify-between">
+                                        <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">Sold As</span>
+                                        <span class="font-sans text-2xs font-medium text-neutral-600 dark:text-neutral-300">Per Length</span>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">Unit</span>
+                                        <span class="font-sans text-2xs font-medium text-neutral-600 dark:text-neutral-300"><span x-text="item.units_per_order"></span>&nbsp;<span x-text="item.length_unit"></span></span>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">Qty</span>
+                                        <span class="font-sans text-2xs font-medium text-neutral-600 dark:text-neutral-300" x-text="item.quantity"></span>
+                                    </div>
+                                    <div class="flex items-center justify-between border-t border-neutral-100 dark:border-neutral-800 pt-1.5">
+                                        <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">Total Length</span>
+                                        <span class="font-sans text-2xs font-semibold text-brand dark:text-brand-300"><span x-text="$store.cart.totalFabric(item)"></span>&nbsp;<span x-text="item.length_unit"></span></span>
+                                    </div>
                                 </div>
                             </template>
                             <template x-if="item.selling_method === 'per-set'">
                                 <div class="flex items-center gap-4 flex-wrap">
-                                    <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">Sold per <span class="font-medium text-neutral-600 dark:text-neutral-300" x-text="item.unit_label || 'Set'"></span></span>
-                                    <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">Qty: <span class="font-medium text-neutral-600 dark:text-neutral-300" x-text="item.quantity"></span></span>
+                                    <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">Sold As: <span class="font-medium text-neutral-600 dark:text-neutral-300">Per Set</span></span>
+                                    <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">Qty: <span class="font-medium text-neutral-600 dark:text-neutral-300" x-text="item.quantity + (item.quantity === 1 ? ' Set' : ' Sets')"></span></span>
                                 </div>
                             </template>
                             <template x-if="item.selling_method === 'per-bundle'">
@@ -471,7 +497,12 @@ document.addEventListener('alpine:init', () => {
                                 </button>
                             </div>
                             <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">
-                                <span x-text="$store.currency.format(item.unit_price)"></span> / <span x-text="item.unit_label || 'unit'"></span>
+                                <template x-if="item.selling_method === 'per-length'">
+                                    <span><span x-text="$store.currency.format(item.unit_price)"></span> per <span x-text="item.units_per_order + ' ' + item.length_unit"></span></span>
+                                </template>
+                                <template x-if="item.selling_method !== 'per-length'">
+                                    <span><span x-text="$store.currency.format(item.unit_price)"></span> / <span x-text="item.unit_label || (item.selling_method === 'per-set' ? 'Set' : 'unit')"></span></span>
+                                </template>
                             </span>
                         </div>
 
@@ -525,7 +556,7 @@ document.addEventListener('alpine:init', () => {
                                                 </span>
                                             </template>
                                             <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">
-                                                <span x-text="$store.currency.format(ao.unit_price)"></span> / <span x-text="ao.unit_label || 'unit'"></span>
+                                                <span x-text="$store.currency.format(ao.unit_price)"></span> / <span x-text="ao.unit_label || (ao.selling_method === 'per-set' ? 'Set' : 'unit')"></span>
                                             </span>
                                         </div>
 
@@ -580,7 +611,7 @@ document.addEventListener('alpine:init', () => {
                                             <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500" x-text="suggestion.category"></p>
                                             <div class="flex items-center gap-1 mt-0.5 flex-wrap">
                                                 <span class="font-sans text-2xs font-semibold text-neutral-700 dark:text-neutral-300"><span x-text="$store.currency.format(suggestion.unit_price)"></span></span>
-                                                <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">/ <span x-text="suggestion.unit_label || 'unit'"></span></span>
+                                                <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">/ <span x-text="suggestion.unit_label || (suggestion.selling_method === 'per-set' ? 'Set' : 'unit')"></span></span>
                                                 <template x-if="suggestion.selling_method === 'per-length'">
                                                     <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">&middot; <span x-text="suggestion.units_per_order + ' ' + suggestion.length_unit"></span></span>
                                                 </template>
@@ -594,6 +625,15 @@ document.addEventListener('alpine:init', () => {
                                         >
                                             <svg viewBox="0 0 24 24" fill="none" class="w-3 h-3 flex-shrink-0"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                                             Add
+                                        </button>
+
+                                        {{-- Dismiss button --}}
+                                        <button
+                                            @click="$store.cart.dismissSuggestion(index, suggestion.product_id)"
+                                            class="flex-shrink-0 w-5 h-5 flex items-center justify-center text-neutral-300 dark:text-neutral-600 hover:text-neutral-500 dark:hover:text-neutral-400 transition-colors"
+                                            aria-label="Dismiss suggestion"
+                                        >
+                                            <svg viewBox="0 0 24 24" fill="none" class="w-3 h-3"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
                                         </button>
 
                                     </div>

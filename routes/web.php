@@ -2,11 +2,22 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Models\Product;
+use App\Services\CurrencyService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
 });
+
+// ─── Currency preference (no auth required — persists to session / DB)
+Route::post('/currency/set', function (Request $request, CurrencyService $currencyService) {
+    $raw  = strtoupper(trim($request->input('code', 'NGN')));
+    $code = in_array($raw, CurrencyService::SUPPORTED_CURRENCIES) ? $raw : CurrencyService::BASE_CURRENCY;
+    $currencyService->setUserCurrency($code);
+
+    return response()->json(['ok' => true, 'active' => $code]);
+})->name('currency.set');
 
 // ─── Storefront ──────────────────────────────────────────────────────────────
 

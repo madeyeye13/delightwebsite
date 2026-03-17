@@ -309,6 +309,17 @@
                                 </p>
                             </div>
                         </div>
+                        <template x-if="(() => { var v = product.variants && product.variants[activeVariant]; var vw = v && typeof v.weight === 'number' && v.weight > 0 ? v.weight : null; var pw = typeof product.weight === 'number' && product.weight > 0 ? product.weight : null; return vw || pw; })()">
+                            <div class="flex items-center gap-2">
+                                <svg viewBox="0 0 24 24" fill="none" class="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500 flex-shrink-0"><path d="M12 3a4 4 0 0 1 4 4c0 1.5-.8 2.8-2 3.5V12h2a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h2v-1.5A4 4 0 0 1 8 7a4 4 0 0 1 4-4z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                <div>
+                                    <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 uppercase tracking-wider leading-none mb-0.5">Weight</p>
+                                    <p class="font-sans text-xs font-medium text-neutral-700 dark:text-neutral-300"
+                                       x-text="(() => { var v = product.variants && product.variants[activeVariant]; var vw = v && typeof v.weight === 'number' && v.weight > 0 ? v.weight : null; var w = vw || (typeof product.weight === 'number' && product.weight > 0 ? product.weight : null); return w ? w + ' ' + (product.weightUnit || 'kg') : ''; })()">
+                                    </p>
+                                </div>
+                            </div>
+                        </template>
                     </div>
 
                     {{-- ── COLOUR SWATCHES ───────────────────────────────── --}}

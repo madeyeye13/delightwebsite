@@ -19,7 +19,21 @@
 
 @php
     $alwaysShowHeaderBg = true;
+
+    // SEO: pre-compute before @section directives
+    if (is_array($product ?? null)) {
+        $_seoTitle = (!empty($product['metaTitle']) ? $product['metaTitle'] : ($product['name'] ?? '')) . ' | ' . config('app.name');
+        $_seoDescription = $product['metaDescription'] ?? '';
+    } elseif (is_object($product ?? null)) {
+        $_seoTitle = (!empty($product->meta_title) ? $product->meta_title : ($product->name ?? '')) . ' | ' . config('app.name');
+        $_seoDescription = $product->meta_description ?? '';
+    } else {
+        $_seoTitle = config('app.name');
+        $_seoDescription = '';
+    }
 @endphp
+
+@section('title', $_seoTitle)
 
 @section('content')
 
@@ -55,6 +69,8 @@ $mock = [
     'slug'          => 'premium-french-lace-fabric',
     'category'      => 'Lace Fabrics',
     'description'   => 'A premium-grade French lace fabric crafted for the modern Nigerian woman. Features intricate floral embroidery with a soft-feel base fabric. Perfect for owambe occasions, aso-ebi co-ordination and bridal wear.',
+    'metaTitle'     => '',
+    'metaDescription' => '',
     'sellingMethod' => 'per-length',
     'unitsPerOrder' => 5,
     'unitLabel'     => 'yards',
@@ -76,12 +92,16 @@ $mock = [
     'discountValue' => 16,
     'stockQuantity' => 8,
     'images'        => [],
+    'weight'        => null,
+    'weightUnit'    => 'kg',
     'variants'  => [
-        ['id' => 101, 'color' => 'Ivory White',  'hex' => '#F5F0E8', 'images' => ['images/products/lace-ivory-1.jpg','images/products/lace-ivory-2.jpg','images/products/lace-ivory-3.jpg'], 'stock' => 4, 'priceAdjustment' => 0],
-        ['id' => 102, 'color' => 'Royal Blue',   'hex' => '#2C4A8F', 'images' => ['images/products/lace-blue-1.jpg','images/products/lace-blue-2.jpg'], 'stock' => 2, 'priceAdjustment' => 0],
-        ['id' => 103, 'color' => 'Champagne',    'hex' => '#C9A96E', 'images' => ['images/products/lace-champ-1.jpg','images/products/lace-champ-2.jpg'], 'stock' => 2, 'priceAdjustment' => 500],
-        ['id' => 104, 'color' => 'Forest Green', 'hex' => '#1F6F67', 'images' => ['images/products/lace-green-1.jpg'], 'stock' => 0, 'priceAdjustment' => 0],
+        ['id' => 101, 'color' => 'Ivory White',  'hex' => '#F5F0E8', 'images' => ['images/products/lace-ivory-1.jpg','images/products/lace-ivory-2.jpg','images/products/lace-ivory-3.jpg'], 'stock' => 4, 'priceAdjustment' => 0, 'weight' => null],
+        ['id' => 102, 'color' => 'Royal Blue',   'hex' => '#2C4A8F', 'images' => ['images/products/lace-blue-1.jpg','images/products/lace-blue-2.jpg'], 'stock' => 2, 'priceAdjustment' => 0, 'weight' => null],
+        ['id' => 103, 'color' => 'Champagne',    'hex' => '#C9A96E', 'images' => ['images/products/lace-champ-1.jpg','images/products/lace-champ-2.jpg'], 'stock' => 2, 'priceAdjustment' => 500, 'weight' => null],
+        ['id' => 104, 'color' => 'Forest Green', 'hex' => '#1F6F67', 'images' => ['images/products/lace-green-1.jpg'], 'stock' => 0, 'priceAdjustment' => 0, 'weight' => null],
     ],
+    'weight'        => null,
+    'weightUnit'    => 'kg',
     // addOns: real catalog products — each becomes its own independent cart line.
     // Shape mirrors your product architecture so the cart panel/page can render them correctly.
     'addOns' => [
@@ -184,6 +204,10 @@ if (!isset($product) || $product === null) {
         'images'        => $toSafeArray($product->images   ?? null, []),
         'variants'      => $toSafeArray($product->variants ?? null, []),
         'addOns'        => $toSafeArray($product->addOns   ?? null, []),
+        'weight'        => $product->weight ?? null,
+        'weightUnit'    => $product->weightUnit ?? 'kg',
+        'metaTitle'     => (string) ($product->metaTitle ?? ''),
+        'metaDescription' => (string) ($product->metaDescription ?? ''),
     ];
 }
 
@@ -204,6 +228,13 @@ $hasIncluded     = !empty($p['includedItems']);
 $hasExcludes     = !empty($p['excludesText']);
 
 @endphp
+
+@push('head')
+    <meta name="description" content="{{ e($p['metaDescription'] ?? '') }}">
+    <meta property="og:title" content="{{ e(!empty($p['metaTitle']) ? $p['metaTitle'] : $p['name']) }}">
+    <meta property="og:description" content="{{ e($p['metaDescription'] ?? '') }}">
+    <meta property="og:type" content="product">
+@endpush
 
 {{-- ══════════════════════════════════════════════════════════════════════════
      PAGE ROOT
@@ -233,6 +264,12 @@ window.__pdp = {
     // ── Gallery ───────────────────────────────────────────────────────────
     variants:       {!! json_encode(array_values((array) $p['variants'])) !!},
     images:         {!! json_encode(array_values((array) $p['images'])) !!},
+    // ── Weight (for shipping) ─────────────────────────────────────────────
+    weight:         {{ isset($p['weight']) && $p['weight'] !== null ? (float) $p['weight'] : 'null' }},
+    weightUnit:     "{{ e($p['weightUnit'] ?? 'kg') }}",
+    // ── SEO ───────────────────────────────────────────────────────────────
+    metaTitle:      "{{ e($p['metaTitle'] ?? '') }}",
+    metaDescription:"{{ e($p['metaDescription'] ?? '') }}",
     // ── Related catalog products (each becomes its own cart line) ─────────
     addOns:         {!! json_encode(array_values((array) $p['addOns'])) !!},
 };
@@ -417,6 +454,15 @@ window.__pdp = {
                         </p>
                     </div>
                 </div>
+                @if(isset($p['weight']) && $p['weight'] !== null && $p['weight'] > 0)
+                <div class="flex items-center gap-2">
+                    <svg viewBox="0 0 24 24" fill="none" class="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500 flex-shrink-0"><path d="M12 3a4 4 0 0 1 4 4c0 1.5-.8 2.8-2 3.5V12h2a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h2v-1.5A4 4 0 0 1 8 7a4 4 0 0 1 4-4z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <div>
+                        <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 uppercase tracking-wider leading-none mb-0.5">Weight</p>
+                        <p class="font-sans text-xs font-medium text-neutral-700 dark:text-neutral-300">{{ $p['weight'] }} {{ $p['weightUnit'] ?? 'kg' }}</p>
+                    </div>
+                </div>
+                @endif
             </div>
 
             {{-- Colour variants — smaller swatches --}}
@@ -459,11 +505,11 @@ window.__pdp = {
                     <div class="flex justify-between"><span class="font-sans text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Step</span><span class="font-sans text-sm font-semibold text-neutral-900 dark:text-white">{{ $p['quantityStep'] }} unit(s) at a time</span></div>
 
                 @elseif($p['sellingMethod'] === 'per-set')
-                    <div class="flex justify-between"><span class="font-sans text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Sold Per</span><span class="font-sans text-sm font-semibold text-neutral-900 dark:text-white">{{ $p['unitLabel'] ?: 'Set' }}</span></div>
+                    <div class="flex justify-between"><span class="font-sans text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Sold As</span><span class="font-sans text-sm font-semibold text-neutral-900 dark:text-white">Per Set</span></div>
                     <div class="flex justify-between"><span class="font-sans text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Min. Order</span><span class="font-sans text-sm font-semibold text-neutral-900 dark:text-white">{{ $p['minQuantity'] }} {{ Str::plural($p['unitLabel'] ?: 'set', $p['minQuantity']) }}</span></div>
                     @if(!empty($p['setContents']))
                     <div class="pt-2 border-t border-neutral-100 dark:border-neutral-800">
-                        <p class="font-sans text-2xs font-semibold tracking-widest uppercase text-neutral-400 dark:text-neutral-500 mb-2">1 {{ $p['unitLabel'] ?: 'set' }} contains</p>
+                        <p class="font-sans text-2xs font-semibold tracking-widest uppercase text-neutral-400 dark:text-neutral-500 mb-2">Each Set Contains</p>
                         @foreach((array) $p['setContents'] as $item)
                         <div class="flex items-center gap-2 mt-1"><span class="w-1 h-1 rounded-full bg-brand flex-shrink-0"></span><span class="font-sans text-xs text-neutral-700 dark:text-neutral-300">{{ $item['name'] }} &times;{{ $item['quantity'] }}</span></div>
                         @endforeach
@@ -523,7 +569,7 @@ window.__pdp = {
                 <div class="flex flex-wrap gap-x-4 gap-y-1 mt-1">
                     @if($p['minQuantity'] > 1)
                     <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">
-                        Min. order: <span class="font-medium text-neutral-600 dark:text-neutral-300">{{ $p['minQuantity'] }} {{ $p['minQuantity'] == 1 ? 'unit' : 'units' }}</span>
+                        Min. order: <span class="font-medium text-neutral-600 dark:text-neutral-300">{{ $p['minQuantity'] }} {{ $p['sellingMethod'] === 'per-set' ? Str::plural($p['unitLabel'] ?: 'set', $p['minQuantity']) : ($p['minQuantity'] == 1 ? 'unit' : 'units') }}</span>
                     </span>
                     @endif
                     @if($p['quantityStep'] > 1)
@@ -546,7 +592,11 @@ window.__pdp = {
                         {{-- LEFT: Unit count --}}
                         <div class="text-center min-w-0">
                             <p class="font-display text-lg font-bold text-brand-700 dark:text-brand-200" x-text="qty"></p>
+                            @if($p['sellingMethod'] === 'per-set')
+                            <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider" x-text="qty === 1 ? 'Set' : 'Sets'"></p>
+                            @else
                             <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider" x-text="qty === 1 ? 'Unit' : 'Units'"></p>
+                            @endif
                         </div>
 
                         @if($p['sellingMethod'] === 'per-length' && $p['unitsPerOrder'] > 0)
@@ -555,13 +605,11 @@ window.__pdp = {
                             <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider mb-0.5">Total {{ ucfirst($p['lengthUnit'] ?: 'length') }}</p>
                             <p class="font-display text-lg font-bold text-brand-700 dark:text-brand-200"><span x-text="qty * {{ (int)$p['unitsPerOrder'] }}"></span> <span class="text-sm font-semibold">{{ $p['lengthUnit'] }}</span></p>
                         </div>
-                        @elseif($p['sellingMethod'] === 'per-set' && !empty($p['setContents']))
-                        {{-- CENTER: Set contents --}}
+                        @elseif($p['sellingMethod'] === 'per-set')
+                        {{-- CENTER: Sold As label (set contents shown once in selling details above) --}}
                         <div class="flex-1 text-center min-w-0">
-                            <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider mb-0.5">Per {{ $p['unitLabel'] ?: 'set' }} contains</p>
-                            @foreach((array) $p['setContents'] as $item)
-                            <p class="font-sans text-xs text-brand-700 dark:text-brand-300">{{ $item['name'] }} &times; <span x-text="qty * {{ (int)$item['quantity'] }}"></span></p>
-                            @endforeach
+                            <p class="font-sans text-2xs text-brand-500 dark:text-brand-400 uppercase tracking-wider mb-0.5">Sold As</p>
+                            <p class="font-display text-sm font-bold text-brand-700 dark:text-brand-200">Per Set</p>
                         </div>
                         @elseif($p['sellingMethod'] === 'per-bundle' && !empty($p['bundleYield']))
                         {{-- CENTER: Bundle yield --}}
@@ -748,7 +796,7 @@ window.__pdp = {
                             @if($p['sellingMethod'] === 'per-loom' && !empty($p['loomSize']))
                             <div><p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 uppercase tracking-wider mb-1">Loom Size</p><p class="font-sans text-sm text-neutral-800 dark:text-white font-medium">{{ $p['loomSize'] }}</p></div>
                             @endif
-                            <div><p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 uppercase tracking-wider mb-1">Min. Order</p><p class="font-sans text-sm text-neutral-800 dark:text-white font-medium">{{ $p['minQuantity'] }} {{ $p['minQuantity'] == 1 ? 'unit' : 'units' }}</p></div>
+                            <div><p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 uppercase tracking-wider mb-1">Min. Order</p><p class="font-sans text-sm text-neutral-800 dark:text-white font-medium">{{ $p['minQuantity'] }} {{ $p['sellingMethod'] === 'per-set' ? Str::plural($p['unitLabel'] ?: 'set', $p['minQuantity']) : ($p['minQuantity'] == 1 ? 'unit' : 'units') }}</p></div>
                             <div><p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 uppercase tracking-wider mb-1">Category</p><p class="font-sans text-sm text-neutral-800 dark:text-white font-medium">{{ $p['category'] }}</p></div>
                         </div>
                     </div>
@@ -922,8 +970,22 @@ function productDetail() {
         variantAdjustment: _variantAdj,
         isAdding:       false,
         isBuying:       false,
+        weight:         typeof d.weight === 'number' ? d.weight : null,
+        weightUnit:     d.weightUnit || 'kg',
 
         // ── computed ──────────────────────────────────────────────────────
+
+        // Effective weight: variant weight if set, otherwise product-level weight
+        get effectiveWeight() {
+            var v = this.variants[this.activeVariant];
+            if (v && typeof v.weight === 'number' && v.weight > 0) {
+                return { value: v.weight, unit: this.weightUnit };
+            }
+            if (typeof this.weight === 'number' && this.weight > 0) {
+                return { value: this.weight, unit: this.weightUnit };
+            }
+            return null;
+        },
 
         get totalFabric() {
             return this.qty * this.unitsPerOrder;
@@ -1073,6 +1135,25 @@ function productDetail() {
                 selected_variant: v ? { id: v.id, color: v.color, hex: v.hex } : null,
                 image:           this.selectedImage,
                 stock_quantity:  this.stockQty,
+                suggested_add_ons: (d.addOns || []).map(function(ao) {
+                    return {
+                        product_id:      ao.id,
+                        slug:            ao.slug || '',
+                        name:            ao.name,
+                        category:        ao.category || '',
+                        subcategory:     '',
+                        image:           ao.image || '',
+                        selling_method:  ao.sellingMethod,
+                        unit_label:      ao.unitLabel || '',
+                        length_unit:     ao.lengthUnit || null,
+                        units_per_order: ao.unitsPerOrder || 1,
+                        min_quantity:    ao.minQuantity || 1,
+                        quantity_step:   ao.quantityStep || 1,
+                        stock_quantity:  ao.stockQuantity || 0,
+                        loom_size:       ao.loomSize || null,
+                        unit_price:      ao.price,
+                    };
+                }),
             });
 
             // Add selected add-ons as separate cart lines
