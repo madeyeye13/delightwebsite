@@ -148,6 +148,7 @@
 
     {{-- Order Detail Drawer --}}
     @teleport('body')
+    <div>
     @if($viewing)
     <div class="fixed inset-0 z-50 flex items-start justify-end" aria-modal="true" wire:key="order-drawer">
         <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" wire:click="closeOrder()"></div>
@@ -253,5 +254,6 @@
         </div>
     </div>
     @endif
+    </div>
     @endteleport
 </div>
