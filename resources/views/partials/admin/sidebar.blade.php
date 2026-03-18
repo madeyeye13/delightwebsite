@@ -3,6 +3,26 @@
     Usage: @include('partials.admin.sidebar')
     Requires Alpine.js & Tailwind CSS
 --}}
+<style>
+    .sidebar-scroll::-webkit-scrollbar {
+        width: 3px;
+    }
+    .sidebar-scroll::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .sidebar-scroll::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 9999px;
+    }
+    .sidebar-scroll::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.18);
+    }
+    /* Firefox */
+    .sidebar-scroll {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255,255,255,0.08) transparent;
+    }
+</style>
 
 <aside
     x-data
@@ -79,7 +99,7 @@
     {{-- ═══════════════════════════════════════
          MAIN NAV
     ═══════════════════════════════════════ --}}
-    <nav class="flex-1 overflow-y-auto overflow-x-hidden py-3 px-2 space-y-0.5 scrollbar-none">
+    <nav class="flex-1 overflow-y-auto overflow-x-hidden py-3 px-2 space-y-0.5 sidebar-scroll">
 
         <p x-show="$store.sidebar.open"
            x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
@@ -228,6 +248,45 @@
                   x-transition:enter="transition ease-out duration-150 delay-75" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
                   x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
                   class="text-[13px] font-medium whitespace-nowrap" style="display:none">Currencies</span>
+        </a>
+
+        <div class="my-2 border-t border-white/[0.05]"></div>
+
+        <p x-show="$store.sidebar.open"
+           x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+           x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+           class="px-2 pt-1 pb-2 text-[10px] font-semibold tracking-widest uppercase text-white/20" style="display:none">Shipping</p>
+
+        {{-- Custom Shipping --}}
+        <a href="{{ route('admin.shipping.index') }}" title="Custom Shipping"
+           class="nav-item group flex items-center gap-3 px-2 py-2 rounded-lg transition-all duration-150
+                  {{ request()->routeIs('admin.shipping.index') ? 'bg-emerald-500/10 text-emerald-400' : 'text-white/50 hover:text-white hover:bg-white/[0.05]' }}">
+            <span class="flex items-center justify-center w-5 h-5 shrink-0">
+                <svg class="w-[15px] h-[15px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M1 3h15v13H1zM16 8h4l3 3v5h-7V8z"/>
+                    <circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+                </svg>
+            </span>
+            <span x-show="$store.sidebar.open"
+                  x-transition:enter="transition ease-out duration-150 delay-75" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                  x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+                  class="text-[13px] font-medium whitespace-nowrap" style="display:none">Custom Shipping</span>
+        </a>
+
+        {{-- DHL Settings --}}
+        <a href="{{ route('admin.shipping.dhl') }}" title="DHL Settings"
+           class="nav-item group flex items-center gap-3 px-2 py-2 rounded-lg transition-all duration-150
+                  {{ request()->routeIs('admin.shipping.dhl') ? 'bg-emerald-500/10 text-emerald-400' : 'text-white/50 hover:text-white hover:bg-white/[0.05]' }}">
+            <span class="flex items-center justify-center w-5 h-5 shrink-0">
+                <svg class="w-[15px] h-[15px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                </svg>
+            </span>
+            <span x-show="$store.sidebar.open"
+                  x-transition:enter="transition ease-out duration-150 delay-75" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                  x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+                  class="text-[13px] font-medium whitespace-nowrap" style="display:none">DHL Settings</span>
         </a>
 
     </nav>

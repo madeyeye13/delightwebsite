@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\PaymentCallbackController;
 use App\Http\Controllers\ProfileController;
 use App\Models\Product;
 use App\Services\CurrencyService;
@@ -12,7 +13,7 @@ Route::get('/', function () {
 
 // ─── Currency preference (no auth required — persists to session / DB)
 Route::post('/currency/set', function (Request $request, CurrencyService $currencyService) {
-    $raw  = strtoupper(trim($request->input('code', 'NGN')));
+    $raw = strtoupper(trim($request->input('code', 'NGN')));
     $code = in_array($raw, CurrencyService::SUPPORTED_CURRENCIES) ? $raw : CurrencyService::BASE_CURRENCY;
     $currencyService->setUserCurrency($code);
 
@@ -38,6 +39,18 @@ Route::get('/cart', function () {
 Route::get('/checkout', function () {
     return view('frontend.checkout.index');
 })->name('checkout.index');
+
+Route::get('/checkout/success/{orderNumber}', function (string $orderNumber) {
+    return view('frontend.checkout.success', compact('orderNumber'));
+})->name('checkout.success');
+
+// ─── Payment Callbacks ────────────────────────────────────────────────────────
+
+Route::get('/payment/paystack/callback', [PaymentCallbackController::class, 'paystack'])
+    ->name('payment.paystack.callback');
+
+Route::get('/payment/flutterwave/callback', [PaymentCallbackController::class, 'flutterwave'])
+    ->name('payment.flutterwave.callback');
 
 // ─── Preview helpers (development only) ──────────────────────────────────────
 
@@ -88,6 +101,18 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/currencies', function () {
         return view('admin.currencies.index');
     })->name('currencies.index');
+
+    Route::get('/orders', function () {
+        return view('admin.orders.index');
+    })->name('orders.index');
+
+    Route::get('/shipping', function () {
+        return view('admin.shipping.index');
+    })->name('shipping.index');
+
+    Route::get('/shipping/dhl', function () {
+        return view('admin.shipping.dhl');
+    })->name('shipping.dhl');
 
 });
 

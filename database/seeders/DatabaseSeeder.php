@@ -19,6 +19,9 @@ class DatabaseSeeder extends Seeder
             CategorySeeder::class,
             SellingMethodSeeder::class,
             CurrencySeeder::class,
+            NigerianStateShippingSeeder::class,
+            LagosLGAShippingSeeder::class,
+            DhlConfigurationSeeder::class,
         ]);
 
         User::factory()->create([
