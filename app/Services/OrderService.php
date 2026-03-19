@@ -44,7 +44,10 @@ class OrderService
         }
 
         $shippingCost = (float) ($shipping['price'] ?? 0);
-        $total = max(0, $subtotalNGN - $discountAmount + $shippingCost);
+        $referralDiscount = (float) ($payload['referralDiscountAmount'] ?? 0);
+        $pointsDiscount   = (float) ($payload['pointsDiscountAmount'] ?? 0);
+
+        $total = max(0, $subtotalNGN - $discountAmount - $referralDiscount - $pointsDiscount + $shippingCost);
 
         $order = Order::create([
             'order_number' => Order::generateOrderNumber(),
@@ -83,6 +86,11 @@ class OrderService
             'total' => (int) round($total),
 
             'status' => 'pending',
+
+            'referral_code'             => $payload['referralCode'] ?? null,
+            'referral_discount_amount'  => $payload['referralDiscountAmount'] ?? 0,
+            'points_redeemed'           => $payload['pointsRedeemed'] ?? 0,
+            'points_discount_amount'    => $payload['pointsDiscountAmount'] ?? 0,
         ]);
 
         // Create order items from cart

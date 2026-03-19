@@ -41,6 +41,11 @@ class Order extends Model
         'status',
         'reminder_sent_at',
         'admin_notes',
+        'referral_code', 
+        'referral_discount_amount', 
+        'points_redeemed', 
+        'points_discount_amount'
+
     ];
 
     protected function casts(): array
@@ -91,4 +96,75 @@ class Order extends Model
     {
         return $query->where('payment_status', 'paid');
     }
+
+
+    public function canBeCancelled(): bool
+    {
+        return in_array($this->status, ['pending', 'processing'])
+            && $this->status !== 'cancelled';
+    }
+ 
+    /**
+     * Delivery address can be changed as long as the order is pending/processing.
+     */
+    public function canChangeAddress(): bool
+    {
+        return in_array($this->status, ['pending', 'processing']);
+    }
+ 
+    /**
+     * Human-readable status label.
+     */
+    public function statusLabel(): string
+    {
+        return match($this->status) {
+            'pending'    => 'Pending',
+            'processing' => 'Processing',
+            'shipped'    => 'Shipped',
+            'delivered'  => 'Delivered',
+            'cancelled'  => 'Cancelled',
+            default      => ucfirst($this->status),
+        };
+    }
+ 
+    /**
+     * Tailwind color classes for status badge.
+     */
+    public function statusColor(): string
+    {
+        return match($this->status) {
+            'pending'    => 'text-amber-400 bg-amber-400/10',
+            'processing' => 'text-blue-400 bg-blue-400/10',
+            'shipped'    => 'text-violet-400 bg-violet-400/10',
+            'delivered'  => 'text-emerald-400 bg-emerald-400/10',
+            'cancelled'  => 'text-red-400 bg-red-400/10',
+            default      => 'text-white/50 bg-white/5',
+        };
+    }
+ 
+    /**
+     * Payment status label.
+     */
+    public function paymentStatusLabel(): string
+    {
+        return match($this->payment_status) {
+            'pending'  => 'Awaiting Payment',
+            'paid'     => 'Paid',
+            'failed'   => 'Failed',
+            'refunded' => 'Refunded',
+            default    => ucfirst($this->payment_status),
+        };
+    }
+ 
+    public function paymentStatusColor(): string
+    {
+        return match($this->payment_status) {
+            'paid'     => 'text-emerald-400 bg-emerald-400/10',
+            'pending'  => 'text-amber-400 bg-amber-400/10',
+            'refunded' => 'text-blue-400 bg-blue-400/10',
+            'failed'   => 'text-red-400 bg-red-400/10',
+            default    => 'text-white/50 bg-white/5',
+        };
+    }
+
 }

@@ -177,6 +177,15 @@
             showSuggestions:    false,
             _addrTimer:         null,
 
+            referralCode:        '',
+            referralDiscountPct: 0,
+            referralApplied:     false,
+            pointBalance:        0,
+            maxPointsPerOrder:   0,
+            nairaPerPoint:       0,
+            maxPointsDiscountNgn: 0,
+            pointsToRedeem:      0,  // what the user chooses to spend
+
             init() {
                 this.summaryOpen = window.innerWidth >= 1024;
                 window.addEventListener('resize', () => {
@@ -204,6 +213,24 @@
                         this.fetchShippingOptions();
                     }
                 });
+
+
+                // Load referral + points discounts from session/auth
+                this.$nextTick(async () => {
+                    const discounts = await this.$wire.getCheckoutDiscounts();
+                    this.referralCode         = discounts.referralCode || '';
+                    this.referralDiscountPct  = discounts.referralDiscountPct || 0;
+                    this.pointBalance         = discounts.pointBalance || 0;
+                    this.maxPointsPerOrder    = discounts.maxPointsPerOrder || 0;
+                    this.nairaPerPoint        = discounts.nairaPerPoint || 0;
+                    this.maxPointsDiscountNgn = discounts.maxPointsDiscountNgn || 0;
+                    // Auto-apply referral if code is in session
+                    if (this.referralCode && this.referralDiscountPct > 0) {
+                        this.referralApplied = true;
+                    }
+                });
+
+
             },
 
             syncCartFromStore() {
@@ -462,7 +489,7 @@
             async placeOrder() {
                 if (!this.form.paymentMethod || this.placingOrder) return;
 
-                this.orderError  = '';
+                this.orderError   = '';
                 this.placingOrder = true;
 
                 try {
@@ -472,6 +499,7 @@
                         shippingMethod: this.selectedShipping || { id: this.form.shippingMethod, price: this.shippingCost(), estimated_days: null },
                         paymentMethod:  this.form.paymentMethod,
                         promoCode:      this.promoApplied ? this.promoCode : null,
+                        pointsToRedeem: this.pointsToRedeem,   // ← the only addition
                     });
 
                     if (result && result.success) {
@@ -537,12 +565,22 @@
 
             subtotal()     { return this.cart.items.reduce((s, i) => s + i.price * i.qty, 0); },
             addOnsTotal()  { return (this.cart.addOns || []).reduce((s, a) => s + a.price * (a.qty || 1), 0); },
-            promoSavings() { return this.promoApplied ? Math.round(this.subtotal() * this.promoDiscount / 100) : 0; },
+            promoSavings()    { return this.promoApplied ? Math.round(this.subtotal() * this.promoDiscount / 100) : 0; },
+            referralSavings() { return (this.referralApplied && this.referralDiscountPct) ? Math.round(this.subtotal() * this.referralDiscountPct / 100) : 0; },
+            pointsDiscount()  { return Math.round(this.pointsToRedeem * this.nairaPerPoint); },
             shippingCost() {
                 const m = this.selectedShipping;
                 return m ? (m.price || 0) : 0;
             },
-            getTotal()     { return this.subtotal() + this.addOnsTotal() - this.promoSavings() + this.shippingCost(); },
+            // ✅ updated
+            getTotal() {
+                return this.subtotal()
+                    + this.addOnsTotal()
+                    - this.promoSavings()
+                    - this.referralSavings()
+                    - this.pointsDiscount()
+                    + this.shippingCost();
+            },
 
             fmt(n) {
                 const store = Alpine.store('currency');
@@ -1171,7 +1209,85 @@
                                     <button @click="clearPromo()" class="text-[10px] font-medium text-brand hover:text-brand-600">Remove</button>
                                 </div>
                             </template>
+
+             
+
+                            {{-- ← ADD THESE TWO BLOCKS RIGHT AFTER IT: --}}
+
+                            <template x-if="referralApplied && referralSavings() > 0">
+                                <div class="flex justify-between text-xs text-brand">
+                                    <span>Referral discount (<span x-text="referralDiscountPct"></span>%)</span>
+                                    <span>− <span x-text="fmt(referralSavings())"></span></span>
+                                </div>
+                            </template>
+
+                            <template x-if="pointsToRedeem > 0">
+                                <div class="flex justify-between text-xs text-accent-600 dark:text-accent-400">
+                                    <span>Reward points (<span x-text="pointsToRedeem"></span> pts)</span>
+                                    <span>− <span x-text="fmt(pointsDiscount())"></span></span>
+                                </div>
+                            </template>
+
+
                         </div>
+
+                        {{-- ── Referral Discount (auto-applied from session) ── --}}
+                        <template x-if="referralApplied && referralDiscountPct > 0">
+                            <div class="px-5 py-3 border-t border-neutral-100 dark:border-neutral-700">
+                                <div class="flex items-center justify-between px-3 py-2"
+                                    style="background:#E6F3F2;border:1px solid #99CFC9">
+                                    <div class="flex items-center gap-1.5">
+                                        <svg class="w-3.5 h-3.5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                        </svg>
+                                        <span class="text-xs font-semibold text-brand"
+                                            x-text="'Referral discount — ' + referralDiscountPct + '% off'"></span>
+                                    </div>
+                                    <span class="text-xs font-semibold text-brand"
+                                        x-text="'−' + fmt(referralSavings())"></span>
+                                </div>
+                            </div>
+                        </template>
+
+                        {{-- ── Reward Points (logged-in users only) ── --}}
+                        <template x-if="pointBalance > 0">
+                            <div class="px-5 py-3 border-t border-neutral-100 dark:border-neutral-700">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center gap-1.5">
+                                        <svg class="w-3.5 h-3.5 text-accent-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                        </svg>
+                                        <span class="text-xs font-semibold text-neutral-700 dark:text-neutral-200">
+                                            Reward Points
+                                        </span>
+                                    </div>
+                                    <span class="text-[10px] text-neutral-400 dark:text-neutral-500"
+                                        x-text="pointBalance + ' pts available (₦' + (pointBalance * nairaPerPoint).toLocaleString() + ')'">
+                                    </span>
+                                </div>
+
+                                {{-- Slider --}}
+                                <input type="range"
+                                    x-model.number="pointsToRedeem"
+                                    :min="0"
+                                    :max="Math.min(pointBalance, maxPointsPerOrder)"
+                                    :step="1"
+                                    class="w-full accent-brand h-1.5 cursor-pointer"
+                                />
+                                <div class="flex justify-between text-[10px] text-neutral-400 dark:text-neutral-500 mt-1">
+                                    <span>0 pts</span>
+                                    <span x-show="pointsToRedeem > 0"
+                                        x-text="'Using ' + pointsToRedeem + ' pts = −₦' + (pointsToRedeem * nairaPerPoint).toLocaleString()"
+                                        class="text-brand font-medium">
+                                    </span>
+                                    <span x-text="'Max ' + Math.min(pointBalance, maxPointsPerOrder) + ' pts'"></span>
+                                </div>
+                            </div>
+                        </template>
+
+                        
 
                         {{-- ── Totals ──────────────────────────────────── --}}
                         <div class="px-5 py-3 space-y-2">

@@ -3,12 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
-use App\Services\FlutterwaveService;
-use App\Services\OrderService;
-use App\Services\PaystackService;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\RedirectResponse;
+use App\Services\OrderService;
+use App\Services\PaystackService;
+use App\Services\FlutterwaveService;
+use App\Services\ReferralService;
 
 class PaymentCallbackController extends Controller
 {
@@ -16,6 +17,7 @@ class PaymentCallbackController extends Controller
         private readonly OrderService $orderService,
         private readonly PaystackService $paystackService,
         private readonly FlutterwaveService $flutterwaveService,
+        private readonly ReferralService $referralService, // ✅ Injected once
     ) {}
 
     public function paystack(Request $request): RedirectResponse
@@ -23,7 +25,8 @@ class PaymentCallbackController extends Controller
         $reference = $request->query('reference');
 
         if (! $reference) {
-            return redirect()->route('checkout.index')->with('error', 'Invalid payment reference.');
+            return redirect()->route('checkout.index')
+                ->with('error', 'Invalid payment reference.');
         }
 
         try {
@@ -37,16 +40,34 @@ class PaymentCallbackController extends Controller
                 $order = Order::where('order_number', $reference)->first();
 
                 if ($order && $order->payment_status !== 'paid') {
+
+                    // ✅ Mark order as paid
                     $this->orderService->markOrderPaid($order, $reference);
+
+                    // ✅ Process referral + points (only once)
+                    if (! $order->referral_processed) {
+                        $this->referralService->processReferralForOrder($order, $request);
+                        $this->referralService->processPointsRedemption($order);
+
+                        $order->update([
+                            'referral_processed' => true
+                        ]);
+                    }
                 }
 
-                return redirect()->route('checkout.success', ['orderNumber' => $order?->order_number ?? $reference]);
+                return redirect()->route('checkout.success', [
+                    'orderNumber' => $order?->order_number ?? $reference
+                ]);
             }
         } catch (\Throwable $e) {
-            Log::error('Paystack callback error', ['reference' => $reference, 'error' => $e->getMessage()]);
+            Log::error('Paystack callback error', [
+                'reference' => $reference,
+                'error' => $e->getMessage()
+            ]);
         }
 
-        return redirect()->route('checkout.index')->with('error', 'Payment could not be verified. Please contact support.');
+        return redirect()->route('checkout.index')
+            ->with('error', 'Payment could not be verified. Please contact support.');
     }
 
     public function flutterwave(Request $request): RedirectResponse
@@ -55,7 +76,8 @@ class PaymentCallbackController extends Controller
         $txRef = $request->query('tx_ref');
 
         if ($status !== 'successful' || ! $txRef) {
-            return redirect()->route('checkout.index')->with('error', 'Payment was not completed.');
+            return redirect()->route('checkout.index')
+                ->with('error', 'Payment was not completed.');
         }
 
         try {
@@ -69,15 +91,33 @@ class PaymentCallbackController extends Controller
                 $order = Order::where('order_number', $txRef)->first();
 
                 if ($order && $order->payment_status !== 'paid') {
+
+                    // ✅ Mark order as paid
                     $this->orderService->markOrderPaid($order, $txRef);
+
+                    // ✅ Process referral + points (only once)
+                    if (! $order->referral_processed) {
+                        $this->referralService->processReferralForOrder($order, $request);
+                        $this->referralService->processPointsRedemption($order);
+
+                        $order->update([
+                            'referral_processed' => true
+                        ]);
+                    }
                 }
 
-                return redirect()->route('checkout.success', ['orderNumber' => $order?->order_number ?? $txRef]);
+                return redirect()->route('checkout.success', [
+                    'orderNumber' => $order?->order_number ?? $txRef
+                ]);
             }
         } catch (\Throwable $e) {
-            Log::error('Flutterwave callback error', ['tx_ref' => $txRef, 'error' => $e->getMessage()]);
+            Log::error('Flutterwave callback error', [
+                'tx_ref' => $txRef,
+                'error' => $e->getMessage()
+            ]);
         }
 
-        return redirect()->route('checkout.index')->with('error', 'Payment could not be verified. Please contact support.');
+        return redirect()->route('checkout.index')
+            ->with('error', 'Payment could not be verified. Please contact support.');
     }
 }

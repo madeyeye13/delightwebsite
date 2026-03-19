@@ -12,6 +12,7 @@
 @tailwind components;
 @tailwind utilities;
 
+[x-cloak] { display: none !important; }
 /* ── CUSTOM SCROLLBAR ──────────────────────────────────────── */
 /* Webkit browsers (Chrome, Edge, Safari, Opera) */
 ::-webkit-scrollbar {

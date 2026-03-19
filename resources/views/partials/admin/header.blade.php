@@ -203,7 +203,7 @@
                     </p>
                 </div>
                 <div class="py-1">
-                    <a href="{{ route('profile.edit') }}"
+                    <a href="{{ route('account.profile') }}"
                        class="flex items-center gap-2.5 px-4 py-2 text-[13px]
                               text-gray-600 hover:text-gray-900 hover:bg-gray-50
                               dark:text-white/60 dark:hover:text-white dark:hover:bg-white/[0.04]

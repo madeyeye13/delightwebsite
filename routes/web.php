@@ -6,6 +6,11 @@ use App\Models\Product;
 use App\Services\CurrencyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Livewire\Dashboard\OrderDetail;
+use App\Livewire\Dashboard\Orders;
+use App\Livewire\Dashboard\Profile;
+use App\Livewire\Dashboard\ReferralRewards;
+use App\Livewire\Dashboard\Wishlist;
 
 Route::get('/', function () {
     return view('welcome');
@@ -114,14 +119,25 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         return view('admin.shipping.dhl');
     })->name('shipping.dhl');
 
+    Route::get('/rewards', function () {
+    return view('admin.rewards.settings');
+    })->name('rewards.settings');
+
 });
 
 // ─── Auth profile ─────────────────────────────────────────────────────────────
 
-Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
+Route::middleware(['auth', 'verified'])
+    ->prefix('account')
+    ->name('account.')
+    ->group(function () {
+ 
+        Route::get('/orders',           Orders::class)->name('orders');
+        Route::get('/orders/{order}',   OrderDetail::class)->name('orders.show');
+        Route::get('/wishlist',         Wishlist::class)->name('wishlist');
+        Route::get('/profile',          Profile::class)->name('profile');
+        Route::get('/referral',         ReferralRewards::class)->name('referral');
+ 
+    });
 
 require __DIR__.'/auth.php';

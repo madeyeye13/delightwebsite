@@ -24,6 +24,10 @@ use Livewire\Component;
 class Checkout extends Component
 {
     public bool $isGuest = true;
+    public string $sessionReferralCode = '';
+    public int $userPointBalance = 0;
+    public int $maxPointsPerOrder = 0;
+    public int $nairaPerPoint = 0;
 
     public function mount(): void
     {
@@ -33,6 +37,51 @@ class Checkout extends Component
         }
 
         $this->isGuest = ! Auth::check();
+
+        // Load referral code captured by CaptureReferral middleware
+        $this->sessionReferralCode = Session::get('referral_code', '');
+
+        // Load reward point info for logged-in users
+        if (Auth::check()) {
+            $this->userPointBalance = \App\Models\RewardPoint::balanceFor(Auth::id());
+            $this->maxPointsPerOrder = \App\Models\RewardSetting::maxPointsPerOrder();
+            $this->nairaPerPoint     = \App\Models\RewardSetting::nairaPerPoint();
+        }
+    }
+
+    /**
+ * Called from Alpine on page load to get referral/points info.
+ * Returns what discounts are available to this checkout session.
+ */
+    public function getCheckoutDiscounts(): array
+    {
+        $referralDiscount = 0;
+        $referralCode     = $this->sessionReferralCode;
+        $userId           = Auth::id();
+
+        if ($referralCode) {
+            $referral = \App\Models\Referral::where('code', $referralCode)->first();
+
+            // Disallow using your own code
+            if ($referral && $referral->user_id !== $userId) {
+                $percent          = \App\Models\RewardSetting::referralDiscountPercent();
+                $referralDiscount = $percent; // percent — Alpine calculates NGN amount
+            } else {
+                // Invalid or own code — clear it
+                $referralCode = '';
+                Session::forget('referral_code');
+            }
+        }
+
+        return [
+            'referralCode'          => $referralCode,
+            'referralDiscountPct'   => $referralDiscount,
+            'pointBalance'          => $this->userPointBalance,
+            'maxPointsPerOrder'     => $this->maxPointsPerOrder,
+            'nairaPerPoint'         => $this->nairaPerPoint,
+            // Max NGN the user can get from points
+            'maxPointsDiscountNgn'  => $this->maxPointsPerOrder * $this->nairaPerPoint,
+        ];
     }
 
     /**
@@ -227,6 +276,33 @@ class Checkout extends Component
 
             return $unitPrice * $item->quantity;
         });
+
+        // ── Referral discount ────────────────────────────────────────────
+$referralCode           = Session::get('referral_code', '');
+$referralDiscountAmount = 0;
+
+if ($referralCode) {
+    $referralDiscountAmount = app(\App\Services\ReferralService::class)
+        ->calculateDiscount($referralCode, $subtotal, $user->id);
+    // Inject into payload so OrderService stores it
+    $payload['referralCode']           = $referralCode;
+    $payload['referralDiscountAmount'] = $referralDiscountAmount;
+}
+
+// ── Points redemption ─────────────────────────────────────────────
+$pointsToRedeem         = (int) ($payload['pointsToRedeem'] ?? 0);
+$pointsDiscountAmount   = 0;
+
+if ($pointsToRedeem > 0 && Auth::check()) {
+    $maxAllowed     = \App\Models\RewardSetting::maxPointsPerOrder();
+    $userBalance    = \App\Models\RewardPoint::balanceFor($user->id);
+    $pointsToRedeem = min($pointsToRedeem, $maxAllowed, $userBalance);
+
+    $pointsDiscountAmount = $pointsToRedeem * \App\Models\RewardSetting::nairaPerPoint();
+
+    $payload['pointsRedeemed']        = $pointsToRedeem;
+    $payload['pointsDiscountAmount']  = $pointsDiscountAmount;
+}
 
         // Create order
         $order = $orderService->createOrder($user, $cart, $payload, (float) $subtotal);
