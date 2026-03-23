@@ -411,4 +411,170 @@
 @include('partials.frontend.marquee-collection')
 <livewire:frontend.featured-products />
 
+
+
+    {{-- ════════════════════════════════════════════════════════════
+         WHY CHOOSE US
+    ═══════════════════════════════════════════════════════════════ --}}
+
+    <style>
+        @keyframes wcuUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .wcu-in { animation: wcuUp 0.6s ease-out both; }
+
+        .wcu-feat-line {
+            width: 0;
+            transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .wcu-feat:hover .wcu-feat-line { width: 100%; }
+
+        .wcu-arr { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .wcu-btn:hover .wcu-arr { transform: translateX(5px); }
+
+        .wcu-section { background-color: #FCFCF9; }
+        .dark .wcu-section { background-color: #071E1E; }
+    </style>
+
+    <section class="wcu-section">
+
+        <div class="max-w-[1400px] mx-auto px-6 sm:px-10 lg:px-16 py-24 lg:py-32">
+            <div class="grid lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_380px] gap-12 xl:gap-20 items-stretch">
+
+                {{-- ── LEFT ──────────────────────────────────────── --}}
+                <div class="flex flex-col justify-between gap-14">
+
+                    {{-- Header --}}
+                    <div>
+                        <div class="wcu-in flex items-center gap-3 mb-7" style="animation-delay:0s">
+                            <span class="h-px w-8 bg-brand-500 block"></span>
+                            <span class="font-sans text-2xs font-semibold tracking-widest uppercase text-brand-500 dark:text-brand-300">
+                                Why Choose Us
+                            </span>
+                        </div>
+
+                        <h2 class="wcu-in font-display font-extrabold text-ink dark:text-white leading-tight tracking-tighter
+                                   text-3xl sm:text-4xl lg:text-[42px] mb-5"
+                            style="animation-delay:0.08s">
+                            Why Choose 1st Delightsome Fabrics
+                            <span class="block text-brand-500 dark:text-brand-300">in Ikeja, Lagos</span>
+                        </h2>
+
+                        <p class="wcu-in font-sans text-base text-neutral-500 dark:text-white/55 leading-relaxed max-w-xl"
+                           style="animation-delay:0.16s">
+                            We've been on this street long enough to know exactly what fabric buyers actually need —
+                            and what most shops get wrong. Our stock is hand-picked, prices are fixed, and the staff
+                            know every roll on the shelf. No runaround, no shortage, no negotiating the obvious.
+                        </p>
+                    </div>
+
+                    {{-- 2×2 Features --}}
+                    @php
+                        $wcuFeats = [
+                            [
+                                'title' => 'Hand-picked, every bolt',
+                                'body'  => 'Every fabric is inspected for weight, finish, and colour before it hits the shelf. If it doesn\'t pass, it doesn\'t come in.',
+                                'delay' => '0.24s',
+                            ],
+                            [
+                                'title' => 'Fixed pricing, always',
+                                'body'  => 'The price on the tag is the price at checkout — two yards or two hundred. No back-and-forth, no "special rate" politics.',
+                                'delay' => '0.32s',
+                            ],
+                            [
+                                'title' => 'Staff who know fabrics',
+                                'body'  => 'Drape, care, what wears well in Lagos heat — our team can answer the practical questions that save you from bad buys.',
+                                'delay' => '0.40s',
+                            ],
+                            [
+                                'title' => 'Built for Lagos fashion',
+                                'body'  => 'Deep stock kept deliberately — so when aso-ebi season hits or a deadline creeps up, you can walk in and walk out sorted.',
+                                'delay' => '0.48s',
+                            ],
+                        ];
+                    @endphp
+
+                    <div class="grid sm:grid-cols-2 gap-x-10 gap-y-0 divide-y divide-neutral-200 dark:divide-white/10 sm:divide-y-0">
+                        @foreach($wcuFeats as $i => $f)
+                        <div class="wcu-feat wcu-in group py-6 sm:py-0 sm:border-t sm:border-neutral-200 dark:sm:border-white/10 cursor-default"
+                             style="animation-delay:{{ $f['delay'] }}; {{ $i >= 2 ? 'padding-top:1.5rem; margin-top:1.5rem;' : 'padding-top:1.5rem;' }}">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="font-sans text-2xs font-bold tracking-widest text-accent">0{{ $i + 1 }}</span>
+                                <div class="relative h-px flex-1 bg-neutral-200 dark:bg-white/10 overflow-hidden">
+                                    <div class="wcu-feat-line absolute top-0 left-0 h-full bg-brand-400 dark:bg-brand-300"></div>
+                                </div>
+                            </div>
+                            <h3 class="font-display text-md font-semibold text-ink dark:text-white leading-snug mb-1.5
+                                       transition-colors duration-300 group-hover:text-brand-500 dark:group-hover:text-brand-300">
+                                {{ $f['title'] }}
+                            </h3>
+                            <p class="font-sans text-sm text-neutral-500 dark:text-white/45 leading-relaxed">{{ $f['body'] }}</p>
+                        </div>
+                        @endforeach
+                    </div>
+
+                    {{-- CTAs --}}
+                    <div class="wcu-in flex flex-wrap gap-3 pt-2" style="animation-delay:0.56s">
+                        <a href="{{ route('shop.index') }}"
+                           class="wcu-btn inline-flex items-center gap-3 px-7 py-3.5
+                                  font-sans text-sm font-semibold text-white
+                                  bg-brand-500 transition-colors duration-300 hover:bg-brand-600">
+                            View Collections
+                            <svg class="wcu-arr w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                        </a>
+                        <a href="/about"
+                           class="wcu-btn inline-flex items-center gap-3 px-7 py-3.5
+                                  font-sans text-sm font-semibold text-ink dark:text-white
+                                  border border-neutral-300 dark:border-white/20
+                                  transition-all duration-300 hover:border-ink dark:hover:border-white/50">
+                            About Us
+                            <svg class="wcu-arr w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                        </a>
+                    </div>
+
+                </div>{{-- /left --}}
+
+
+                {{-- ── RIGHT: dark brand panel ─────────────────── --}}
+                <div class="wcu-in bg-brand-800 dark:bg-brand-800/60 flex flex-col justify-between p-10 lg:p-12"
+                     style="animation-delay:0.2s">
+
+                    {{-- Tagline --}}
+                    <div class="mb-10">
+                        <p class="font-display text-xl font-semibold text-white leading-snug mb-4">
+                            "The fabric shop that actually knows what it's selling."
+                        </p>
+                        <span class="block h-px w-12 bg-accent"></span>
+                    </div>
+
+                    {{-- Stats --}}
+                    @php
+                        $wcuStats = [
+                            ['val' => '15+',  'lbl' => 'Experience'],
+                            ['val' => '500+', 'lbl' => 'Fabric Varieties'],
+                            ['val' => '1K+',  'lbl' => 'Happy Designers'],
+                        ];
+                    @endphp
+                    <div class="space-y-6">
+                        @foreach($wcuStats as $s)
+                        <div class="flex items-end justify-between border-b border-white/10 pb-5 last:border-0 last:pb-0">
+                            <span class="font-sans text-sm text-white/50 tracking-wide">{{ $s['lbl'] }}</span>
+                            <span class="font-display text-4xl font-extrabold text-accent leading-none tracking-tighter">{{ $s['val'] }}</span>
+                        </div>
+                        @endforeach
+                    </div>
+
+                </div>{{-- /right panel --}}
+
+            </div>{{-- /grid --}}
+        </div>{{-- /container --}}
+
+    </section>{{-- /why-choose-us --}}
+
+
+    <livewire:frontend.our-products />
+
+    @include('components.recent-blog-posts')
+
 @endsection

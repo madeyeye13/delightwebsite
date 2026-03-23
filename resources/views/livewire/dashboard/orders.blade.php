@@ -1,5 +1,5 @@
 <div class="p-6 md:p-8 max-w-5xl mx-auto">
-
+    <!---resources/views/livewire/dashboard/orders.blade.php--->
     {{-- Page header --}}
     <div class="mb-8">
         <h1 class="font-display text-2xl font-semibold text-white tracking-tight">My Orders</h1>

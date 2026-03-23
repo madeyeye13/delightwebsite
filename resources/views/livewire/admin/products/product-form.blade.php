@@ -427,7 +427,7 @@
                     {{-- Rich Text Description --}}
                     <div>
                         <label class="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">Description</label>
-                        <div id="quill-editor" class="rounded-lg overflow-hidden border border-neutral-300 dark:border-neutral-700">
+                        <div wire:ignore id="quill-editor" class="rounded-lg overflow-hidden border border-neutral-300 dark:border-neutral-700">
                             <div id="quill-toolbar">
                                 <span class="ql-formats">
                                     <select class="ql-header"><option selected></option><option value="2">H2</option><option value="3">H3</option></select>
@@ -1503,31 +1503,40 @@
                     </div>
                 </div>
 
-                <div class="space-y-2 pt-3 border-t border-neutral-200 dark:border-neutral-800">
-                    <button onclick="window.history.back()" class="w-full px-4 py-2 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-50 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors font-medium text-sm">Cancel</button>
+                <div class="space-y-2.5 pt-3 border-t border-neutral-200 dark:border-neutral-800">
+                    <button
+                        onclick="window.history.back()"
+                        class="w-full px-4 py-3.5 flex items-center justify-center border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-50 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors font-medium text-sm"
+                    >Cancel</button>
+
                     <button
                         @click="saveDraft()"
                         :disabled="saving"
                         :class="saving ? 'opacity-50 cursor-not-allowed' : ''"
-                        class="w-full px-4 py-2 bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-50 rounded-lg hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-all font-medium text-sm"
+                        class="w-full px-4 py-3.5 flex items-center justify-center gap-2 bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-50 rounded-lg hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-all font-medium text-sm"
                     >
-                        <span x-show="saving && saveAction === 'draft'" class="inline-flex items-center gap-2">
-                            <svg class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
-                            Saving...
-                        </span>
-                        <span x-show="!saving || saveAction !== 'draft'">Save Draft</span>
+                        <svg x-show="saving && saveAction === 'draft'" style="display:none" class="animate-spin w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                        <span x-text="(saving && saveAction === 'draft') ? 'Saving...' : 'Save Draft'">Save Draft</span>
                     </button>
+
                     <button
                         @click="publishProduct()"
                         :disabled="saving"
                         :class="saving ? 'opacity-50 cursor-not-allowed' : ''"
-                        class="w-full px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-600 transition-all font-medium text-sm"
+                        class="w-full px-4 py-3.5 flex items-center justify-center gap-2 bg-accent text-white rounded-lg hover:bg-accent-600 transition-all font-medium text-sm"
                     >
-                        <span x-show="saving && saveAction === 'publish'" class="inline-flex items-center gap-2">
-                            <svg class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
-                            Publishing...
-                        </span>
-                        <span x-show="!saving || saveAction !== 'publish'">Publish</span>
+                        <svg x-show="saving && saveAction === 'publish'" style="display:none" class="animate-spin w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                        <span x-text="(saving && saveAction === 'publish') ? 'Publishing...' : 'Publish'">Publish</span>
+                    </button>
+
+                    <button
+                        @click="publishAndCreateAnother()"
+                        :disabled="saving"
+                        :class="saving ? 'opacity-50 cursor-not-allowed' : ''"
+                        class="w-full px-4 py-3.5 flex items-center justify-center gap-2 bg-brand text-white rounded-lg hover:bg-brand-600 transition-all font-medium text-sm"
+                    >
+                        <svg x-show="saving && saveAction === 'publishAnother'" style="display:none" class="animate-spin w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                        <span x-text="(saving && saveAction === 'publishAnother') ? 'Publishing...' : 'Publish & Create Another'">Publish &amp; Create Another</span>
                     </button>
                 </div>
             </div>
@@ -1675,6 +1684,9 @@
 </div>
 @push('scripts')
 <script src="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.min.js"></script>
+<script>
+    window.__productCreateUrl = '{{ route('admin.products.create') }}';
+</script>
 
 @verbatim
 <script>
@@ -1892,20 +1904,45 @@ function productFormManager() {
     });
 
     this.$nextTick(() => {
-        this.quillEditor = new Quill('#quill-body', {
-            modules: { toolbar: '#quill-toolbar' },
-            theme: 'snow',
-            placeholder: 'Write a detailed description of your product...',
-        });
-        this.quillEditor.on('text-change', () => {
-            this.form.description = this.quillEditor.getText();
-            this.form.descriptionHtml = this.quillEditor.root.innerHTML;
-            document.getElementById('description-hidden').value = this.form.descriptionHtml;
-            this.generateSchemaMarkup();
-        });
+        this.initQuill();
     });
     this.generateSchemaMarkup();
 },
+
+        // ─────────────────────────────────────────────────────────
+        // QUILL INIT — extracted so it can be called after $wire
+        // calls that may patch the DOM (e.g. storeCategory).
+        // wire:ignore prevents Livewire morphing from touching the
+        // editor container, but we reinitialise defensively anyway.
+        // ─────────────────────────────────────────────────────────
+        initQuill() {
+            // Destroy existing instance cleanly before reinitialising
+            if (this.quillEditor) {
+                this.quillEditor.off('text-change');
+                this.quillEditor = null;
+            }
+            const body = document.getElementById('quill-body');
+            if (!body) return;
+            // If Quill already stamped its own class, it was already initialised —
+            // with wire:ignore in place this path should rarely be needed.
+            if (body.classList.contains('ql-editor')) return;
+            this.quillEditor = new Quill('#quill-body', {
+                modules: { toolbar: '#quill-toolbar' },
+                theme: 'snow',
+                placeholder: 'Write a detailed description of your product...',
+            });
+            // Restore saved HTML content (e.g. on edit page)
+            if (this.form.descriptionHtml) {
+                this.quillEditor.clipboard.dangerouslyPasteHTML(this.form.descriptionHtml);
+            }
+            this.quillEditor.on('text-change', () => {
+                this.form.description = this.quillEditor.getText();
+                this.form.descriptionHtml = this.quillEditor.root.innerHTML;
+                const hidden = document.getElementById('description-hidden');
+                if (hidden) hidden.value = this.form.descriptionHtml;
+                this.generateSchemaMarkup();
+            });
+        },
 
         // ─────────────────────────────────────────────────────────
         // FLAT CATEGORIES: parent → children ordering for <select>
@@ -2023,6 +2060,8 @@ function productFormManager() {
                 } else {
                     this.modals.category = false;
                 }
+                // Reinitialise Quill if Livewire morphing somehow replaced the DOM node
+                this.$nextTick(() => { if (!this.quillEditor) this.initQuill(); });
             } catch (e) {
                 alert('Failed to create category: ' + (e.message || e));
             }
@@ -2524,7 +2563,22 @@ function productFormManager() {
             }
         },
 
+        validateForPublish() {
+            const errors = [];
+            if (!this.form.name?.trim())                errors.push('Product name is required.');
+            if (!this.form.categoryId)                  errors.push('Category is required.');
+            if (!this.form.sellingMethodId)             errors.push('Selling method is required.');
+            if (!this.form.price || Number(this.form.price) <= 0) errors.push('Price must be greater than 0.');
+            if (!this.form.mainImagePreview && !this.form.mainImageMediaId) errors.push('A main product image is required.');
+            return errors;
+        },
+
         async publishProduct() {
+            const errors = this.validateForPublish();
+            if (errors.length > 0) {
+                alert('Please fix the following before publishing:\n\n• ' + errors.join('\n• '));
+                return;
+            }
             this.saving = true;
             this.saveAction = 'publish';
             this.generateSchemaMarkup();
@@ -2534,6 +2588,27 @@ function productFormManager() {
                 if (r?.redirectUrl) { window.location.href = r.redirectUrl; }
             } catch (e) {
                 console.error('Publish failed', e);
+            } finally {
+                this.saving = false;
+                this.saveAction = '';
+            }
+        },
+
+        async publishAndCreateAnother() {
+            const errors = this.validateForPublish();
+            if (errors.length > 0) {
+                alert('Please fix the following before publishing:\n\n\u2022 ' + errors.join('\n\u2022 '));
+                return;
+            }
+            this.saving = true;
+            this.saveAction = 'publishAnother';
+            this.generateSchemaMarkup();
+            const payload = this.buildPayload('active');
+            try {
+                await this.$wire.saveProduct(payload, 'active');
+                window.location.href = window.__productCreateUrl;
+            } catch (e) {
+                console.error('Publish & create another failed', e);
             } finally {
                 this.saving = false;
                 this.saveAction = '';

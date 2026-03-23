@@ -61,7 +61,6 @@ return [
         'api_username' => env('DHL_API_USERNAME'),
         'api_password' => env('DHL_API_PASSWORD'),
         'account_number' => env('DHL_ACCOUNT_NUMBER'),
-
         'origin' => [
             'address' => '22 Latifat Salami Street',
             'city' => 'Lagos',
@@ -69,6 +68,8 @@ return [
             'country' => 'Nigeria',
             'country_code' => 'NG',
             'postal_code' => '100001',
+            'company_name' => '1st Delightsome Fabrics',  // ← add
+            'phone' => env('DHL_ORIGIN_PHONE'),     // ← add
         ],
     ],
 

@@ -1,20 +1,36 @@
 <?php
 
 use App\Http\Controllers\PaymentCallbackController;
-use App\Http\Controllers\ProfileController;
-use App\Models\Product;
-use App\Services\CurrencyService;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
 use App\Livewire\Dashboard\OrderDetail;
 use App\Livewire\Dashboard\Orders;
 use App\Livewire\Dashboard\Profile;
 use App\Livewire\Dashboard\ReferralRewards;
 use App\Livewire\Dashboard\Wishlist;
+use App\Models\BlogPost;
+use App\Models\Product;
+use App\Services\CurrencyService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Blog Routes
+|--------------------------------------------------------------------------
+*/
+
+// Blog index — /blog
+Route::get('/blog', function () {
+    return view('blog.index');
+})->name('blog.index');
+
+// Blog single post — /blog/{slug}
+Route::get('/blog/{post:slug}', function (BlogPost $post) {
+    return view('blog.show', ['post' => $post, 'slug' => $post->slug]);
+})->name('blog.show');
 
 // ─── Currency preference (no auth required — persists to session / DB)
 Route::post('/currency/set', function (Request $request, CurrencyService $currencyService) {
@@ -120,8 +136,14 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     })->name('shipping.dhl');
 
     Route::get('/rewards', function () {
-    return view('admin.rewards.settings');
+        return view('admin.rewards.settings');
     })->name('rewards.settings');
+
+    Route::get('/blog', fn () => view('admin.blog.index'))->name('blog.index');
+    Route::get('/blog/create', fn () => view('admin.blog.form'))->name('blog.create');
+    Route::get('/blog/{post}/edit', function (BlogPost $post) {
+        return view('admin.blog.form', compact('post'));
+    })->name('blog.edit');
 
 });
 
@@ -131,13 +153,13 @@ Route::middleware(['auth', 'verified'])
     ->prefix('account')
     ->name('account.')
     ->group(function () {
- 
-        Route::get('/orders',           Orders::class)->name('orders');
-        Route::get('/orders/{order}',   OrderDetail::class)->name('orders.show');
-        Route::get('/wishlist',         Wishlist::class)->name('wishlist');
-        Route::get('/profile',          Profile::class)->name('profile');
-        Route::get('/referral',         ReferralRewards::class)->name('referral');
- 
+
+        Route::get('/orders', Orders::class)->name('orders');
+        Route::get('/orders/{order}', OrderDetail::class)->name('orders.show');
+        Route::get('/wishlist', Wishlist::class)->name('wishlist');
+        Route::get('/profile', Profile::class)->name('profile');
+        Route::get('/referral', ReferralRewards::class)->name('referral');
+
     });
 
 require __DIR__.'/auth.php';

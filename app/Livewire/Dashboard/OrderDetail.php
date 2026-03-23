@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Dashboard;
+namespace App\Livewire\Dashboard; // for user dashboard order details page
 
 use App\Jobs\SendOrderAddressUpdatedEmail;
 use App\Jobs\SendOrderCancelledEmail;
@@ -20,12 +20,17 @@ class OrderDetail extends Component
     public Order $order;
 
     // Address form fields
-    public string $street  = '';
-    public string $city    = '';
-    public string $state   = '';
+    public string $street = '';
+
+    public string $city = '';
+
+    public string $state = '';
+
     public string $country = 'NG';
-    public string $postal  = '';
-    public string $notes   = '';
+
+    public string $postal = '';
+
+    public string $notes = '';
 
     public bool $addressSaved = false;
 
@@ -36,12 +41,12 @@ class OrderDetail extends Component
 
         $this->order = $order->load('items.product');
 
-        $this->street  = $order->shipping_street  ?? '';
-        $this->city    = $order->shipping_city    ?? '';
-        $this->state   = $order->shipping_state   ?? '';
+        $this->street = $order->shipping_street ?? '';
+        $this->city = $order->shipping_city ?? '';
+        $this->state = $order->shipping_state ?? '';
         $this->country = $order->shipping_country ?? 'NG';
-        $this->postal  = $order->shipping_postal  ?? '';
-        $this->notes   = $order->shipping_notes   ?? '';
+        $this->postal = $order->shipping_postal ?? '';
+        $this->notes = $order->shipping_notes ?? '';
     }
 
     // ── Cancel Order ─────────────────────────────────────────────────────────
@@ -52,6 +57,7 @@ class OrderDetail extends Component
 
         if (! $this->order->canBeCancelled()) {
             $this->addError('cancel', 'This order can no longer be cancelled.');
+
             return;
         }
 
@@ -61,7 +67,7 @@ class OrderDetail extends Component
         }
 
         $this->order->update([
-            'status'         => 'cancelled',
+            'status' => 'cancelled',
             'payment_status' => $this->order->payment_status === 'paid' ? 'refunded' : $this->order->payment_status,
         ]);
 
@@ -98,28 +104,29 @@ class OrderDetail extends Component
     public function updateAddress(): void
     {
         $this->validate([
-            'street'  => 'required|string|max:255',
-            'city'    => 'required|string|max:100',
-            'state'   => 'required|string|max:100',
+            'street' => 'required|string|max:255',
+            'city' => 'required|string|max:100',
+            'state' => 'required|string|max:100',
             'country' => 'required|string|size:2',
-            'postal'  => 'nullable|string|max:20',
-            'notes'   => 'nullable|string|max:500',
+            'postal' => 'nullable|string|max:20',
+            'notes' => 'nullable|string|max:500',
         ]);
 
         $this->order->refresh();
 
         if (! $this->order->canChangeAddress()) {
             $this->addError('address', 'The delivery address can no longer be changed for this order.');
+
             return;
         }
 
         $this->order->update([
-            'shipping_street'  => $this->street,
-            'shipping_city'    => $this->city,
-            'shipping_state'   => $this->state,
+            'shipping_street' => $this->street,
+            'shipping_city' => $this->city,
+            'shipping_state' => $this->state,
             'shipping_country' => $this->country,
-            'shipping_postal'  => $this->postal,
-            'shipping_notes'   => $this->notes,
+            'shipping_postal' => $this->postal,
+            'shipping_notes' => $this->notes,
         ]);
 
         SendOrderAddressUpdatedEmail::dispatch($this->order);
