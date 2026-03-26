@@ -575,6 +575,10 @@
 
     <livewire:frontend.our-products />
 
+    @include('partials.frontend.video-banner')
+
+    @include('partials.frontend.testimonial')
+
     @include('components.recent-blog-posts')
 
 @endsection

@@ -28,7 +28,6 @@
         hovered: false,
         alwaysShowBg: document.documentElement.getAttribute('data-header-bg') === '1',
         searchOpen: false,
-        searchQuery: '',
         mobileOpen: false,
         profileOpen: false,
         shopOpen: false,
@@ -286,11 +285,10 @@
                         <ul class="py-2 list-none">
                             @foreach([
                                 ['New Arrivals',       '/collection/new-arrivals'],
-                                ['Best Sellers',       '/collection/best-sellers'],
-                                ['Wedding Season',     '/collection/wedding'],
+                                
                                 ["Men's Collection",   '/collection/mens'],
                                 ["Women's Collection", '/collection/womens'],
-                                ['Sale & Clearance',   '/collection/sale'],
+                                   
                             ] as [$label, $href])
                             <li>
                                 <a href="{{ $href }}"
@@ -362,26 +360,38 @@
                     </svg>
                 </button>
 
-                {{-- ── CURRENCY SELECTOR (desktop) — CSS :hover --}}
-                <div class="relative hidden lg:block group">
+                {{-- ── CURRENCY SELECTOR (desktop) — click toggle --}}
+                <div class="relative hidden lg:block" x-data="{ currencyMenuOpen: false }">
                     <button
+                        @click="currencyMenuOpen = !currencyMenuOpen"
                         :class="bg ? 'text-gray-700 hover:text-black' : 'text-white hover:text-white/80'"
                         class="flex items-center gap-1.5 text-[12px] tracking-[0.4px] font-medium transition-colors duration-200 bg-transparent border-none cursor-pointer"
+                        :aria-expanded="currencyMenuOpen"
                     >
                         <span x-text="selectedCurrency"></span>
                         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
-                             class="w-3 h-3 transition-transform duration-200 group-hover:rotate-180">
+                             class="w-3 h-3 transition-transform duration-200"
+                             :class="currencyMenuOpen ? 'rotate-180' : ''">
                             <path d="M1.875 7.438 12 17.563 22.125 7.438" stroke="currentColor" stroke-width="2"/>
                         </svg>
                     </button>
                     {{-- Currency dropdown --}}
-                    <div class="absolute top-full right-0 mt-[10px] w-[110px] bg-white shadow-[0_5px_20px_rgba(0,0,0,0.1)]
-                                opacity-0 invisible pointer-events-none
-                                group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto group-hover:mt-[5px]
-                                transition-all duration-300 z-50">
+                    <div
+                        x-show="currencyMenuOpen"
+                        @click.outside="currencyMenuOpen = false"
+                        @keydown.escape.window="currencyMenuOpen = false"
+                        x-transition:enter="transition ease-out duration-150"
+                        x-transition:enter-start="opacity-0 translate-y-1"
+                        x-transition:enter-end="opacity-100 translate-y-0"
+                        x-transition:leave="transition ease-in duration-100"
+                        x-transition:leave-start="opacity-100"
+                        x-transition:leave-end="opacity-0"
+                        class="absolute top-full right-0 mt-[5px] w-[110px] bg-white shadow-[0_5px_20px_rgba(0,0,0,0.1)] z-50"
+                        style="display:none"
+                    >
                         <template x-for="opt in currencyList" :key="opt.code">
                         <button
-                            @click="changeCurrency(opt.code)"
+                            @click="changeCurrency(opt.code); currencyMenuOpen = false"
                             :class="selectedCurrency === opt.code ? 'text-black font-semibold bg-gray-50' : 'text-gray-600'"
                             class="w-full flex items-center gap-2 px-4 py-2 text-[13px] text-left hover:text-black hover:bg-gray-50 transition-colors duration-150 bg-transparent border-none cursor-pointer"
                         >
@@ -405,22 +415,33 @@
                     </svg>
                 </button>
 
-                {{-- ── USER / ACCOUNT (desktop: CSS hover, mobile: click drawer) ── --}}
+                {{-- ── USER / ACCOUNT (desktop: click toggle, mobile: click drawer) ── --}}
                 {{-- Desktop --}}
-                <div class="relative hidden lg:block group">
+                <div class="relative hidden lg:block" x-data="{ userMenuOpen: false }">
                     <button
+                        @click="userMenuOpen = !userMenuOpen"
                         :class="bg ? 'text-gray-700 hover:text-black' : 'text-white hover:text-white/80'"
                         class="transition-colors duration-200 hover:opacity-70 bg-transparent border-none cursor-pointer"
                         aria-label="Account"
+                        :aria-expanded="userMenuOpen"
                     >
                         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5">
                             <path d="M12 12.413a4.358 4.358 0 1 0 0-8.715 4.358 4.358 0 0 0 0 8.715zM3.488 20.857c0-3.085 1.594-5.61 5.26-5.61h6.503c3.667 0 5.261 2.525 5.261 5.61" stroke="currentColor" stroke-width="1.2"/>
                         </svg>
                     </button>
-                    <div class="absolute top-full right-0 mt-[10px] min-w-[180px] bg-white shadow-[0_5px_20px_rgba(0,0,0,0.1)]
-                                opacity-0 invisible pointer-events-none
-                                group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto group-hover:mt-[5px]
-                                transition-all duration-300 z-50">
+                    <div
+                        x-show="userMenuOpen"
+                        @click.outside="userMenuOpen = false"
+                        @keydown.escape.window="userMenuOpen = false"
+                        x-transition:enter="transition ease-out duration-150"
+                        x-transition:enter-start="opacity-0 translate-y-1"
+                        x-transition:enter-end="opacity-100 translate-y-0"
+                        x-transition:leave="transition ease-in duration-100"
+                        x-transition:leave-start="opacity-100"
+                        x-transition:leave-end="opacity-0"
+                        class="absolute top-full right-0 mt-[5px] min-w-[180px] bg-white shadow-[0_5px_20px_rgba(0,0,0,0.1)] z-50"
+                        style="display:none"
+                    >
                         @auth
                             <div class="px-4 py-3 border-b border-gray-100">
                                 <p class="text-xs text-gray-500">Welcome back,</p>
@@ -512,13 +533,14 @@
     x-transition:leave="transition ease-in duration-200"
     x-transition:leave-start="opacity-100"
     x-transition:leave-end="opacity-0"
-    @keydown.escape.window="searchOpen = false; searchQuery = ''"
-    class="fixed inset-0 bg-white/[0.97] z-[3000] flex items-center justify-center"
+    @keydown.escape.window="searchOpen = false; window.dispatchEvent(new CustomEvent('search-reset'))"
+    x-effect="searchOpen && $nextTick(() => document.getElementById('global-search-input')?.focus())"
+    class="fixed inset-0 bg-white/[0.97] z-[3000] flex items-start justify-center pt-[14vh] overflow-y-auto"
     style="display:none"
 >
     {{-- Close button --}}
     <button
-        @click="searchOpen = false; searchQuery = ''"
+        @click="searchOpen = false; window.dispatchEvent(new CustomEvent('search-reset'))"
         class="absolute top-7 right-7 text-gray-400 hover:text-black transition-colors duration-200 bg-transparent border-none cursor-pointer"
         aria-label="Close search"
     >
@@ -527,38 +549,10 @@
         </svg>
     </button>
 
-    {{-- Search input --}}
-    <div class="w-[90%] max-w-[580px]">
+    {{-- Livewire Search Component --}}
+    <div class="w-[90%] max-w-[620px] pb-16">
         <p class="font-sans text-xs tracking-widest uppercase text-gray-400 mb-4">Search</p>
-        <div class="flex items-center border-b-2 border-black pb-2 gap-3">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-400 flex-shrink-0">
-                <path d="M11.048 17.89a6.923 6.923 0 1 0 0-13.847 6.923 6.923 0 0 0 0 13.847z" stroke="currentColor" stroke-width="1.2"/>
-                <path d="m16 16 4.308 4.308" stroke="currentColor" stroke-width="1.2"/>
-            </svg>
-            <input
-                type="text"
-                x-model="searchQuery"
-                x-init="$watch('searchOpen', v => { if (v) $nextTick(() => $el.focus()); })"
-                placeholder="Search fabrics, lace, aso-oke…"
-                class="flex-1 border-none outline-none font-sans text-xl text-black placeholder-gray-300 bg-transparent"
-            />
-            <button
-                x-show="searchQuery.length > 0"
-                @click="searchQuery = ''"
-                class="text-gray-400 hover:text-black transition-colors bg-transparent border-none cursor-pointer"
-            >
-                <svg viewBox="0 0 24 24" fill="none" class="w-4 h-4">
-                    <path d="M18.462 6.479 5.538 19.402M5.538 6.479l12.924 12.923" stroke="currentColor" stroke-width="1.5"/>
-                </svg>
-            </button>
-        </div>
-        {{-- Helper text --}}
-        <p x-show="searchQuery.length === 0" class="mt-4 font-sans text-xs text-gray-400">
-            Try: "lace fabric", "ankara", "aso-oke"
-        </p>
-        <p x-show="searchQuery.length > 0 && searchQuery.length < 2" class="mt-4 font-sans text-xs text-gray-400">
-            Please enter at least 2 characters…
-        </p>
+        <livewire:frontend.global-search />
     </div>
 </div>
 

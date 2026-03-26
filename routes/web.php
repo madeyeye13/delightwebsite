@@ -139,6 +139,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         return view('admin.rewards.settings');
     })->name('rewards.settings');
 
+    Route::get('/testimonials', fn () => view('admin.testimonials.index'))->name('testimonials.index');
+
     Route::get('/blog', fn () => view('admin.blog.index'))->name('blog.index');
     Route::get('/blog/create', fn () => view('admin.blog.form'))->name('blog.create');
     Route::get('/blog/{post}/edit', function (BlogPost $post) {

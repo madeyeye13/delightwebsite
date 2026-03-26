@@ -210,6 +210,22 @@
                   class="text-[13px] font-medium whitespace-nowrap" style="display:none">Blog</span>
         </a>
 
+        {{-- Testimonials --}}
+        <a href="{{ route('admin.testimonials.index') }}" title="Testimonials"
+           class="nav-item group flex items-center gap-3 px-2 py-2 rounded-lg transition-all duration-150
+                  {{ request()->routeIs('admin.testimonials.*') ? 'bg-emerald-500/10 text-emerald-400' : 'text-white/50 hover:text-white hover:bg-white/[0.05]' }}">
+            <span class="flex items-center justify-center w-5 h-5 shrink-0">
+                <svg class="w-[15px] h-[15px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    <path d="M8 9h8M8 13h5"/>
+                </svg>
+            </span>
+            <span x-show="$store.sidebar.open"
+                  x-transition:enter="transition ease-out duration-150 delay-75" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                  x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+                  class="text-[13px] font-medium whitespace-nowrap" style="display:none">Testimonials</span>
+        </a>
+
         {{-- Users --}}
         <a href="{{ route('admin.users.index') }}" title="Users"
            class="nav-item group flex items-center gap-3 px-2 py-2 rounded-lg transition-all duration-150
