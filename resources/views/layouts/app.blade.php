@@ -4,8 +4,13 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
+        <meta name="theme-color" content="#1F6F67">
+        <meta name="author" content="Bezalel Koncept">
 
         <title>{{ config('app.name', 'Laravel') }}</title>
+
+        <link rel="icon" type="image/png" href="/images/logo1.png">
+        <link rel="apple-touch-icon" href="/images/logo1.png">
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])

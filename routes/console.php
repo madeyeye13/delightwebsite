@@ -10,3 +10,7 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::job(new SendOrderReminderEmails)->hourly();
+
+Schedule::command('currency:update-rates')
+    ->cron('0 2 */2 * *')
+    ->withoutOverlapping();

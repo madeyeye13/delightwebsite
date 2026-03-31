@@ -1,4 +1,4 @@
-<x-guest-layout image="{{ asset('images/auth/login-bg.jpg') }}">
+<x-guest-layout image="{{ asset('images/auth/20.jpg') }}">
 
     {{-- Session Status --}}
     @if (session('status'))
@@ -20,7 +20,7 @@
     {{-- x-data on the form: loading starts false, flips true on submit --}}
     <form method="POST" action="{{ route('login') }}"
           x-data="{ loading: false }"
-          @submit="loading = true">
+          @submit.prevent="if (!loading) { loading = true; $nextTick(() => $el.submit()) }">
         @csrf
 
         {{-- Email --}}
@@ -88,7 +88,7 @@
             {{-- Submit button: fades to 50% and disables while loading --}}
             <button type="submit"
                     :disabled="loading"
-                    :class="loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white hover:text-ink-soft hover:border-white cursor-pointer'"
+                    :class="loading ? 'opacity-50 cursor-not-allowed pointer-events-none' : 'hover:bg-white hover:text-ink-soft hover:border-white cursor-pointer'"
                     class="inline-flex items-center gap-2.5
                            border border-white/60 bg-transparent
                            text-white text-xs font-medium tracking-widest uppercase

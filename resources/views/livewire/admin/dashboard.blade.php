@@ -2,13 +2,13 @@
     {{-- Welcome row --}}
     <div class="flex items-center justify-between mb-7">
         <div>
-            <h2 class="text-xl font-semibold text-gray-900 dark:text-white font-display">
+            <h2 class="text-xl font-semibold text-neutral-900 dark:text-neutral-50 font-display">
                 Hello, {{ auth()->user()->name ?? 'Admin' }} 👋
             </h2>
-            <p class="text-sm text-gray-400 dark:text-white/40 mt-0.5">Here's what's happening with your store today.</p>
+            <p class="text-sm text-neutral-400 dark:text-neutral-500 mt-0.5">Here's what's happening with your store today.</p>
         </div>
         <div class="hidden sm:flex items-center gap-2">
-            <span class="text-xs text-gray-400 dark:text-white/30">{{ now()->format('l, d M Y') }}</span>
+            <span class="text-xs text-neutral-400 dark:text-neutral-500">{{ now()->format('l, d M Y') }}</span>
         </div>
     </div>
 
@@ -16,9 +16,9 @@
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
 
         {{-- Total Customers --}}
-        <div class="bg-white dark:bg-[#161920] border border-gray-100 dark:border-white/[0.06] rounded-2xl p-5 flex flex-col gap-3 hover:shadow-md dark:hover:shadow-black/20 transition-shadow">
+        <div class="bg-neutral-50 dark:bg-[#1a2332] border border-neutral-200 dark:border-neutral-800 rounded-lg p-5 flex flex-col gap-3">
             <div class="flex items-center justify-between">
-                <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: #34d39918">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background: #34d39918">
                     <svg class="w-5 h-5" style="color: #34d399" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
                     </svg>
@@ -30,15 +30,15 @@
                 @endif
             </div>
             <div>
-                <p class="text-2xl font-bold text-gray-900 dark:text-white font-display leading-none">{{ number_format($stats['total_customers']) }}</p>
-                <p class="text-xs text-gray-400 dark:text-white/40 mt-1">Total Customers</p>
+                <p class="text-2xl font-bold text-neutral-900 dark:text-neutral-50 font-display leading-none">{{ number_format($stats['total_customers']) }}</p>
+                <p class="text-xs text-neutral-400 dark:text-neutral-500 mt-1">Total Customers</p>
             </div>
         </div>
 
         {{-- Total Products --}}
-        <div class="bg-white dark:bg-[#161920] border border-gray-100 dark:border-white/[0.06] rounded-2xl p-5 flex flex-col gap-3 hover:shadow-md dark:hover:shadow-black/20 transition-shadow">
+        <div class="bg-neutral-50 dark:bg-[#1a2332] border border-neutral-200 dark:border-neutral-800 rounded-lg p-5 flex flex-col gap-3">
             <div class="flex items-center justify-between">
-                <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: #60a5fa18">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background: #60a5fa18">
                     <svg class="w-5 h-5" style="color: #60a5fa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                         <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>
                     </svg>
@@ -48,15 +48,15 @@
                 </span>
             </div>
             <div>
-                <p class="text-2xl font-bold text-gray-900 dark:text-white font-display leading-none">{{ number_format($stats['total_products']) }}</p>
-                <p class="text-xs text-gray-400 dark:text-white/40 mt-1">Total Products</p>
+                <p class="text-2xl font-bold text-neutral-900 dark:text-neutral-50 font-display leading-none">{{ number_format($stats['total_products']) }}</p>
+                <p class="text-xs text-neutral-400 dark:text-neutral-500 mt-1">Total Products</p>
             </div>
         </div>
 
         {{-- Total Orders --}}
-        <div class="bg-white dark:bg-[#161920] border border-gray-100 dark:border-white/[0.06] rounded-2xl p-5 flex flex-col gap-3 hover:shadow-md dark:hover:shadow-black/20 transition-shadow">
+        <div class="bg-neutral-50 dark:bg-[#1a2332] border border-neutral-200 dark:border-neutral-800 rounded-lg p-5 flex flex-col gap-3">
             <div class="flex items-center justify-between">
-                <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: #f59e0b18">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background: #f59e0b18">
                     <svg class="w-5 h-5" style="color: #f59e0b" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                         <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/>
                     </svg>
@@ -66,15 +66,15 @@
                 </span>
             </div>
             <div>
-                <p class="text-2xl font-bold text-gray-900 dark:text-white font-display leading-none">{{ number_format($stats['total_orders']) }}</p>
-                <p class="text-xs text-gray-400 dark:text-white/40 mt-1">Total Orders</p>
+                <p class="text-2xl font-bold text-neutral-900 dark:text-neutral-50 font-display leading-none">{{ number_format($stats['total_orders']) }}</p>
+                <p class="text-xs text-neutral-400 dark:text-neutral-500 mt-1">Total Orders</p>
             </div>
         </div>
 
         {{-- Total Revenue --}}
-        <div class="bg-white dark:bg-[#161920] border border-gray-100 dark:border-white/[0.06] rounded-2xl p-5 flex flex-col gap-3 hover:shadow-md dark:hover:shadow-black/20 transition-shadow">
+        <div class="bg-neutral-50 dark:bg-[#1a2332] border border-neutral-200 dark:border-neutral-800 rounded-lg p-5 flex flex-col gap-3">
             <div class="flex items-center justify-between">
-                <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: #a78bfa18">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background: #a78bfa18">
                     <svg class="w-5 h-5" style="color: #a78bfa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                         <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
                     </svg>
@@ -86,8 +86,8 @@
                 @endif
             </div>
             <div>
-                <p class="text-2xl font-bold text-gray-900 dark:text-white font-display leading-none">₦{{ number_format($stats['total_revenue']) }}</p>
-                <p class="text-xs text-gray-400 dark:text-white/40 mt-1">Total Revenue</p>
+                <p class="text-2xl font-bold text-neutral-900 dark:text-neutral-50 font-display leading-none">₦{{ number_format($stats['total_revenue']) }}</p>
+                <p class="text-xs text-neutral-400 dark:text-neutral-500 mt-1">Total Revenue</p>
             </div>
         </div>
 
@@ -97,13 +97,13 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-7">
 
         {{-- Monthly Sales Bar Chart --}}
-        <div class="lg:col-span-2 bg-white dark:bg-[#161920] border border-gray-100 dark:border-white/[0.06] rounded-2xl p-5">
+        <div class="lg:col-span-2 bg-neutral-50 dark:bg-[#1a2332] border border-neutral-200 dark:border-neutral-800 rounded-lg p-5">
             <div class="flex items-center justify-between mb-4">
                 <div>
-                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Sales Trend</h3>
-                    <p class="text-xs text-gray-400 dark:text-white/30 mt-0.5">Revenue for the last 6 months</p>
+                    <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-50">Sales Trend</h3>
+                    <p class="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">Revenue for the last 6 months</p>
                 </div>
-                <div class="text-xs text-gray-400 dark:text-white/30">
+                <div class="text-xs text-neutral-400 dark:text-neutral-500">
                     <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span>Revenue</span>
                 </div>
             </div>
@@ -122,20 +122,20 @@
                         </div>
                     @endforeach
                 </div>
-                <p class="text-xs text-gray-400 dark:text-white/30 mt-2">
-                    This month: <span class="font-semibold text-gray-700 dark:text-white/70">₦{{ number_format($stats['this_month_revenue']) }}</span>
+                <p class="text-xs text-neutral-400 dark:text-neutral-500 mt-2">
+                    This month: <span class="font-semibold text-neutral-700 dark:text-neutral-300">₦{{ number_format($stats['this_month_revenue']) }}</span>
                 </p>
             @else
-                <div class="h-44 flex items-center justify-center rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-dashed border-gray-200 dark:border-white/[0.06]">
-                    <p class="text-xs text-gray-300 dark:text-white/20">No paid orders yet</p>
+                    <div class="h-44 flex items-center justify-center rounded-lg bg-neutral-100 dark:bg-neutral-800/30 border border-dashed border-neutral-300 dark:border-neutral-700">
+                    <p class="text-xs text-neutral-400 dark:text-neutral-600">No paid orders yet</p>
                 </div>
             @endif
         </div>
 
         {{-- Top Products --}}
-        <div class="bg-white dark:bg-[#161920] border border-gray-100 dark:border-white/[0.06] rounded-2xl p-5">
+        <div class="bg-neutral-50 dark:bg-[#1a2332] border border-neutral-200 dark:border-neutral-800 rounded-lg p-5">
             <div class="flex items-center justify-between mb-4">
-                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Top Products</h3>
+                <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-50">Top Products</h3>
                 <a href="{{ route('admin.products.index') }}" class="text-xs text-emerald-500 hover:text-emerald-400 transition-colors">View all</a>
             </div>
 
@@ -144,10 +144,10 @@
                     @foreach($topProducts as $product)
                         <div>
                             <div class="flex justify-between text-xs mb-1">
-                                <span class="text-gray-600 dark:text-white/60 truncate pr-2">{{ $product['product_name'] }}</span>
-                                <span class="font-medium text-gray-800 dark:text-white/80 flex-shrink-0">{{ number_format($product['total_sold']) }}</span>
+                                <span class="text-neutral-600 dark:text-neutral-400 truncate pr-2">{{ $product['product_name'] }}</span>
+                                <span class="font-medium text-neutral-800 dark:text-neutral-200 flex-shrink-0">{{ number_format($product['total_sold']) }}</span>
                             </div>
-                            <div class="h-1.5 bg-gray-100 dark:bg-white/[0.06] rounded-full overflow-hidden">
+                            <div class="h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden">
                                 @php
                                     $colors = ['bg-emerald-400', 'bg-blue-400', 'bg-amber-400', 'bg-purple-400', 'bg-rose-400'];
                                     $color  = $colors[$loop->index % count($colors)];
@@ -159,7 +159,7 @@
                 </div>
             @else
                 <div class="flex items-center justify-center h-24">
-                    <p class="text-xs text-gray-400 dark:text-white/30">No sales data yet</p>
+                    <p class="text-xs text-neutral-400 dark:text-neutral-500">No sales data yet</p>
                 </div>
             @endif
         </div>
@@ -167,9 +167,9 @@
     </div>
 
     {{-- ── RECENT ORDERS TABLE ── --}}
-    <div class="bg-white dark:bg-[#161920] border border-gray-100 dark:border-white/[0.06] rounded-2xl overflow-hidden">
-        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/[0.06]">
-            <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Recent Orders</h3>
+    <div class="bg-neutral-50 dark:bg-[#1a2332] border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-neutral-200 dark:border-neutral-800">
+            <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-50">Recent Orders</h3>
             <a href="{{ route('admin.orders.index') }}" class="text-xs text-emerald-500 hover:text-emerald-400 transition-colors flex items-center gap-1">
                 View all
                 <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
@@ -180,15 +180,15 @@
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-gray-50 dark:border-white/[0.04]">
-                            <th class="text-left px-5 py-3 text-xs font-semibold text-gray-400 dark:text-white/30 uppercase tracking-wider">Order ID</th>
-                            <th class="text-left px-5 py-3 text-xs font-semibold text-gray-400 dark:text-white/30 uppercase tracking-wider">Customer</th>
-                            <th class="text-left px-5 py-3 text-xs font-semibold text-gray-400 dark:text-white/30 uppercase tracking-wider hidden md:table-cell">Date</th>
-                            <th class="text-left px-5 py-3 text-xs font-semibold text-gray-400 dark:text-white/30 uppercase tracking-wider hidden sm:table-cell">Amount</th>
-                            <th class="text-left px-5 py-3 text-xs font-semibold text-gray-400 dark:text-white/30 uppercase tracking-wider">Status</th>
+                        <tr class="border-b border-neutral-100 dark:border-neutral-800">
+                            <th class="text-left px-5 py-3 text-xs font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Order ID</th>
+                            <th class="text-left px-5 py-3 text-xs font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Customer</th>
+                            <th class="text-left px-5 py-3 text-xs font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider hidden md:table-cell">Date</th>
+                            <th class="text-left px-5 py-3 text-xs font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider hidden sm:table-cell">Amount</th>
+                            <th class="text-left px-5 py-3 text-xs font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Status</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-50 dark:divide-white/[0.03]">
+                    <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800">
                         @foreach($recentOrders as $order)
                             @php
                                 $statusColors = [
@@ -199,9 +199,9 @@
                                     'completed'  => 'bg-emerald-500/10 text-emerald-500',
                                     'cancelled'  => 'bg-red-500/10 text-red-400',
                                 ];
-                                $sc = $statusColors[$order['status']] ?? 'bg-gray-100 dark:bg-white/10 text-gray-500';
+                                $sc = $statusColors[$order['status']] ?? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500';
                             @endphp
-                            <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
+                            <tr class="hover:bg-neutral-100 dark:hover:bg-neutral-800/30 transition-colors">
                                 <td class="px-5 py-3.5">
                                     <span class="text-xs font-mono font-medium text-emerald-500">{{ $order['order_number'] }}</span>
                                 </td>
@@ -210,11 +210,11 @@
                                         <div class="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400/20 to-teal-600/20 flex items-center justify-center text-emerald-500 text-xs font-semibold shrink-0">
                                             {{ strtoupper(substr($order['customer_name'], 0, 1)) }}
                                         </div>
-                                        <span class="text-sm text-gray-700 dark:text-white/70 font-medium">{{ $order['customer_name'] }}</span>
+                                        <span class="text-sm text-neutral-700 dark:text-neutral-300 font-medium">{{ $order['customer_name'] }}</span>
                                     </div>
                                 </td>
-                                <td class="px-5 py-3.5 hidden md:table-cell text-xs text-gray-400 dark:text-white/30">{{ $order['date'] }}</td>
-                                <td class="px-5 py-3.5 hidden sm:table-cell text-sm font-semibold text-gray-800 dark:text-white/80">₦{{ $order['amount'] }}</td>
+                                <td class="px-5 py-3.5 hidden md:table-cell text-xs text-neutral-400 dark:text-neutral-500">{{ $order['date'] }}</td>
+                                <td class="px-5 py-3.5 hidden sm:table-cell text-sm font-semibold text-neutral-800 dark:text-neutral-200">₦{{ $order['amount'] }}</td>
                                 <td class="px-5 py-3.5">
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $sc }}">
                                         {{ ucfirst($order['status']) }}
@@ -227,7 +227,7 @@
             </div>
         @else
             <div class="flex items-center justify-center py-12">
-                <p class="text-sm text-gray-400 dark:text-white/30">No orders yet</p>
+                <p class="text-sm text-neutral-400 dark:text-neutral-500">No orders yet</p>
             </div>
         @endif
     </div>

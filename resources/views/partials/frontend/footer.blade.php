@@ -117,16 +117,12 @@
                         <a href="{{ route('faq') }}" class="text-sm text-white/70 hover:text-brand-400 transition-colors duration-200">FAQs</a>
                     </li>
                     <li>
-                        <a href="#" class="text-sm text-white/70 hover:text-brand-400 transition-colors duration-200">Shipping Info</a>
+                        <a href="/faq" class="text-sm text-white/70 hover:text-brand-400 transition-colors duration-200">Shipping Info</a>
                     </li>
+                    
+                    
                     <li>
-                        <a href="#" class="text-sm text-white/70 hover:text-brand-400 transition-colors duration-200">Track My Order</a>
-                    </li>
-                    <li>
-                        <a href="#" class="text-sm text-white/70 hover:text-brand-400 transition-colors duration-200">Size Guide</a>
-                    </li>
-                    <li>
-                        <a href="#" class="text-sm text-white/70 hover:text-brand-400 transition-colors duration-200">Wholesale Inquiry</a>
+                        <a href="/contact" class="text-sm text-white/70 hover:text-brand-400 transition-colors duration-200">Wholesale Inquiry</a>
                     </li>
                 </ul>
             </div>
@@ -274,9 +270,19 @@
     <div class="max-w-7xl mx-auto px-6 lg:px-10 py-5">
         <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
             {{-- Copyright --}}
-            <p class="text-xs text-white/40 order-2 sm:order-1">
-                &copy; {{ date('Y') }} 1st Delightsome Fabrics. All rights reserved.
-            </p>
+            <div class="order-2 sm:order-1 flex flex-col sm:flex-row items-center gap-1 sm:gap-3">
+                <p class="text-xs text-white/40">
+                    &copy; {{ date('Y') }} 1st Delightsome Fabrics. All rights reserved.
+                </p>
+                <span class="hidden sm:inline text-white/20 text-xs" aria-hidden="true">·</span>
+                <p class="text-xs text-white/30">
+                    Website Created By
+                    <a href="https://wa.me/2349079671373"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="text-brand-400 hover:text-brand-300 transition-colors duration-200">Bezalel Koncept</a>
+                </p>
+            </div>
 
             {{-- Legal links --}}
             <nav class="flex items-center gap-5 order-1 sm:order-2" aria-label="Legal">

@@ -23,13 +23,13 @@ class Referral extends Model
 
     public function getUrlAttribute(): string
     {
-        return url('/?ref=' . $this->code);
+        return url('/?ref='.$this->code);
     }
 
     public static function generateCode(): string
     {
         do {
-            $code = 'DF-' . strtoupper(Str::random(6));
+            $code = 'DF-'.strtoupper(Str::random(6));
         } while (static::where('code', $code)->exists());
 
         return $code;

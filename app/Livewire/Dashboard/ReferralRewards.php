@@ -15,16 +15,16 @@ class ReferralRewards extends Component
 {
     public function render()
     {
-        $user     = auth()->user();
+        $user = auth()->user();
         $referral = Referral::firstOrCreate(
             ['user_id' => $user->id],
-            ['code'    => Referral::generateCode()]
+            ['code' => Referral::generateCode()]
         );
 
-        $pointBalance  = RewardPoint::balanceFor($user->id);
+        $pointBalance = RewardPoint::balanceFor($user->id);
         $nairaPerPoint = RewardSetting::nairaPerPoint();
-        $maxPerOrder   = RewardSetting::maxPointsPerOrder();
-        $pointsValue   = $pointBalance * $nairaPerPoint;
+        $maxPerOrder = RewardSetting::maxPointsPerOrder();
+        $pointsValue = $pointBalance * $nairaPerPoint;
 
         $history = RewardPoint::where('user_id', $user->id)
             ->latest()

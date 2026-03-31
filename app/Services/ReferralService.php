@@ -63,19 +63,19 @@ class ReferralService
         $pointsToAward = RewardSetting::pointsPerReferral();
 
         ReferralUse::create([
-            'referral_id'      => $referral->id,
-            'order_id'         => $order->id,
-            'used_by_user_id'  => $order->user_id,
-            'discount_amount'  => $order->referral_discount_amount,
-            'points_awarded'   => $pointsToAward,
+            'referral_id' => $referral->id,
+            'order_id' => $order->id,
+            'used_by_user_id' => $order->user_id,
+            'discount_amount' => $order->referral_discount_amount,
+            'points_awarded' => $pointsToAward,
         ]);
 
         RewardPoint::create([
-            'user_id'     => $referral->user_id,
-            'points'      => $pointsToAward,
-            'type'        => 'earned',
+            'user_id' => $referral->user_id,
+            'points' => $pointsToAward,
+            'type' => 'earned',
             'description' => "Referral code {$order->referral_code} used on order #{$order->order_number}",
-            'order_id'    => $order->id,
+            'order_id' => $order->id,
         ]);
 
         Log::info("Referral processed: code {$order->referral_code} → {$pointsToAward} pts to user {$referral->user_id}");
@@ -95,11 +95,11 @@ class ReferralService
         }
 
         RewardPoint::create([
-            'user_id'     => $order->user_id,
-            'points'      => -$order->points_redeemed, // negative = spent
-            'type'        => 'redeemed',
+            'user_id' => $order->user_id,
+            'points' => -$order->points_redeemed, // negative = spent
+            'type' => 'redeemed',
             'description' => "Redeemed {$order->points_redeemed} pts on order #{$order->order_number}",
-            'order_id'    => $order->id,
+            'order_id' => $order->id,
         ]);
     }
 
@@ -115,22 +115,22 @@ class ReferralService
         if ($use) {
             $referral = $use->referral;
             RewardPoint::create([
-                'user_id'     => $referral->user_id,
-                'points'      => -$use->points_awarded,
-                'type'        => 'redeemed',
+                'user_id' => $referral->user_id,
+                'points' => -$use->points_awarded,
+                'type' => 'redeemed',
                 'description' => "Reversed: referral points from cancelled order #{$order->order_number}",
-                'order_id'    => $order->id,
+                'order_id' => $order->id,
             ]);
         }
 
         // Restore redeemed points to the buyer
         if ($order->points_redeemed > 0 && $order->user_id) {
             RewardPoint::create([
-                'user_id'     => $order->user_id,
-                'points'      => $order->points_redeemed,
-                'type'        => 'earned',
+                'user_id' => $order->user_id,
+                'points' => $order->points_redeemed,
+                'type' => 'earned',
                 'description' => "Restored: {$order->points_redeemed} pts from cancelled order #{$order->order_number}",
-                'order_id'    => $order->id,
+                'order_id' => $order->id,
             ]);
         }
     }

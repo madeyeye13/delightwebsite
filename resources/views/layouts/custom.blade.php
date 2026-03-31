@@ -23,8 +23,13 @@
         <meta name="keywords" content="{{ $seoKeywords }}">
         @endif
         <meta name="robots" content="{{ $seoNoindex ? 'noindex, nofollow' : 'index, follow' }}">
+        <meta name="theme-color" content="#1F6F67">
+        <meta name="author" content="Bezalel Koncept">
         <meta property="og:title" content="@yield('title', $seoTitle)">
         <meta property="og:site_name" content="{{ config('app.name') }}">
+
+        <link rel="icon" type="image/png" href="/images/logo1.png">
+        <link rel="apple-touch-icon" href="/images/logo1.png">
 
 
         <!-- Scripts -->
@@ -102,6 +107,91 @@
                 </div>
             </template>
         </div>
+
+        {{-- ── AUTH MODAL — shown when guests click wishlist / review ── --}}
+        <div
+            x-data="{ open: false }"
+            @open-auth-modal.window="open = true"
+            x-show="open"
+            x-cloak
+            style="display:none"
+        >
+            {{-- Backdrop --}}
+            <div
+                class="fixed inset-0 z-[9000] bg-black/60 backdrop-blur-sm"
+                x-show="open"
+                x-transition:enter="transition ease-out duration-200"
+                x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100"
+                x-transition:leave="transition ease-in duration-150"
+                x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0"
+                @click="open = false"
+            ></div>
+
+            {{-- Panel --}}
+            <div
+                class="fixed inset-0 z-[9001] flex items-center justify-center px-4"
+                x-show="open"
+                x-transition:enter="transition ease-out duration-200"
+                x-transition:enter-start="opacity-0 scale-95"
+                x-transition:enter-end="opacity-100 scale-100"
+                x-transition:leave="transition ease-in duration-150"
+                x-transition:leave-start="opacity-100 scale-100"
+                x-transition:leave-end="opacity-0 scale-95"
+                @keydown.escape.window="open = false"
+            >
+                <div class="relative w-full max-w-sm bg-white rounded-xl shadow-2xl overflow-hidden">
+                    {{-- Brand bar --}}
+                    <div class="h-1 w-full bg-brand-500"></div>
+
+                    {{-- Close --}}
+                    <button
+                        @click="open = false"
+                        class="absolute top-4 right-4 p-1 rounded-md text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors"
+                        aria-label="Close"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+
+                    <div class="px-8 pt-8 pb-8">
+                        {{-- Icon --}}
+                        <div class="flex justify-center mb-4">
+                            <div class="w-14 h-14 rounded-full bg-brand-50 flex items-center justify-center">
+                                <svg class="w-7 h-7 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM12 14a7 7 0 0 0-7 7h14a7 7 0 0 0-7-7z"/>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <h3 class="text-center text-lg font-semibold text-neutral-900 font-display mb-1">
+                            Sign in to continue
+                        </h3>
+                        <p class="text-center text-sm text-neutral-500 mb-7">
+                            You need an account to save wishlists and leave reviews.
+                        </p>
+
+                        <div class="flex flex-col gap-3">
+                            <a
+                                href="{{ route('login') }}"
+                                class="flex items-center justify-center gap-2 w-full rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium py-2.5 transition-colors duration-200"
+                            >
+                                Sign in
+                            </a>
+                            <a
+                                href="{{ route('register') }}"
+                                class="flex items-center justify-center gap-2 w-full rounded-lg border border-neutral-200 hover:border-brand-300 hover:bg-brand-50 text-neutral-700 hover:text-brand-700 text-sm font-medium py-2.5 transition-colors duration-200"
+                            >
+                                Create an account
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {{-- ── /AUTH MODAL ── --}}
 
         @livewireScripts
     </body>

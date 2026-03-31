@@ -153,19 +153,19 @@ class Checkout extends Component
                     ];
                 }
             } elseif ($country !== 'NG') {
-                // No DHL rates but still international: show placeholder
-                if (! ($dhlResult['not_configured'] ?? false)) {
-                    $options[] = [
-                        'id' => 'dhl_quote',
-                        'name' => 'International Shipping',
-                        'description' => 'Contact us for rates on international orders',
-                        'price' => 0,
-                        'badge' => 'QUOTE',
-                        'badgeCls' => 'text-[10px] bg-accent-100 text-accent-700 px-1.5 py-0.5 font-semibold',
-                        'contact_required' => true,
-                        'estimated_days' => null,
-                    ];
-                }
+                // DHL not yet configured or returned no rates — show coming-soon placeholder.
+                // Once DHL credentials are added to .env and test_mode is turned off in admin,
+                // this branch is replaced automatically by live rates above.
+                $options[] = [
+                    'id' => 'dhl_coming_soon',
+                    'name' => 'DHL International Shipping — Coming Soon',
+                    'description' => "We'll confirm your shipping cost after your order is placed and reach out to you directly.",
+                    'price' => 0,
+                    'badge' => 'COMING SOON',
+                    'badgeCls' => 'text-[10px] bg-neutral-100 text-neutral-500 dark:bg-neutral-700 dark:text-neutral-400 px-1.5 py-0.5 font-semibold',
+                    'contact_required' => true,
+                    'estimated_days' => null,
+                ];
             }
         }
 

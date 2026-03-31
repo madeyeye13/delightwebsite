@@ -1,4 +1,4 @@
-<x-guest-layout image="{{ asset('images/auth/login-bg.jpg') }}">
+<x-guest-layout image="{{ asset('images/auth/20.jpg') }}">
 
     <div class="anim-heading mb-3">
         <h1 class="font-display text-3xl font-semibold leading-tight tracking-tight text-white">
@@ -21,7 +21,7 @@
 
     <form method="POST" action="{{ route('password.email') }}"
           x-data="{ loading: false }"
-          @submit="loading = true">
+          @submit.prevent="if (!loading) { loading = true; $nextTick(() => $el.submit()) }">
         @csrf
 
         {{-- Email --}}
@@ -49,7 +49,7 @@
         <div class="anim-actions flex items-center gap-4 pt-2">
             <button type="submit"
                     :disabled="loading"
-                    :class="loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white hover:text-ink-soft hover:border-white cursor-pointer'"
+                    :class="loading ? 'opacity-50 cursor-not-allowed pointer-events-none' : 'hover:bg-white hover:text-ink-soft hover:border-white cursor-pointer'"
                     class="inline-flex items-center gap-2.5
                            border border-white/60 bg-transparent
                            text-white text-xs font-medium tracking-widest uppercase

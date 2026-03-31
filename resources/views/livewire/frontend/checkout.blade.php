@@ -991,7 +991,7 @@
                                                 <p class="text-[10px] text-neutral-500 dark:text-neutral-400 mt-0.5" x-text="method.description"></p>
                                             </div>
                                             <span class="text-sm font-semibold text-neutral-900 dark:text-neutral-50 shrink-0">
-                                                <template x-if="method.contact_required"><span class="text-accent-600 dark:text-accent-400">Contact us</span></template>
+                                                <template x-if="method.contact_required"><span class="text-neutral-400 dark:text-neutral-500">TBD</span></template>
                                                 <template x-if="!method.contact_required"><span x-text="method.price === 0 ? 'Free' : fmt(method.price)"></span></template>
                                             </span>
                                         </label>

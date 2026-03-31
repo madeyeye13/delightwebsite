@@ -191,6 +191,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
     Route::get('/newsletter', fn () => view('admin.newsletter.index'))->name('newsletter.index');
 
+    Route::get('/profile', fn () => view('admin.profile'))->name('profile');
+
 });
 
 // ─── Auth profile ─────────────────────────────────────────────────────────────

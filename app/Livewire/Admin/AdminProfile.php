@@ -1,16 +1,13 @@
 <?php
 
-namespace App\Livewire\Dashboard;
+namespace App\Livewire\Admin;
 
+use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
-use Livewire\Attributes\Layout;
-use Livewire\Attributes\Title;
 use Livewire\Component;
 
-#[Layout('layouts.dashboard')]
-#[Title('My Profile')]
-class Profile extends Component
+class AdminProfile extends Component
 {
     public string $name = '';
 
@@ -21,10 +18,6 @@ class Profile extends Component
     public string $newPassword = '';
 
     public string $confirmPassword = '';
-
-    public bool $profileSaved = false;
-
-    public bool $passwordSaved = false;
 
     public function mount(): void
     {
@@ -44,8 +37,7 @@ class Profile extends Component
 
         $user->update(['name' => $this->name, 'email' => $this->email]);
 
-        $this->profileSaved = true;
-        $this->dispatch('profile-saved');
+        $this->dispatch('toast', type: 'success', message: 'Profile updated successfully.');
     }
 
     public function changePassword(): void
@@ -69,12 +61,12 @@ class Profile extends Component
         $this->currentPassword = '';
         $this->newPassword = '';
         $this->confirmPassword = '';
-        $this->passwordSaved = true;
-        $this->dispatch('password-changed');
+
+        $this->dispatch('toast', type: 'success', message: 'Password changed successfully.');
     }
 
-    public function render()
+    public function render(): View
     {
-        return view('livewire.dashboard.profile');
+        return view('livewire.admin.admin-profile');
     }
 }
