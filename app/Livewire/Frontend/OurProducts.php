@@ -67,6 +67,8 @@ class OurProducts extends Component
                     'weight' => $product->weight,
                     'weightUnit' => $product->weight_unit ?? 'kg',
                     'variants' => $variants,
+                    'isGiftCard' => (bool) $product->is_gift_card,
+                    'allowCustomAmount' => (bool) $product->allow_custom_amount,
                 ];
             })
             ->toArray();

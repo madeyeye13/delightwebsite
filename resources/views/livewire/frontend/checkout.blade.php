@@ -186,6 +186,14 @@
             maxPointsDiscountNgn: 0,
             pointsToRedeem:      0,  // what the user chooses to spend
 
+            giftCardCode:        '',
+            giftCardApplied:     false,
+            giftCardBalance:     0,
+            giftCardDiscount:    0,
+            giftCardError:       '',
+            giftCardLoading:     false,
+            showGiftCard:        false,
+
             init() {
                 this.summaryOpen = window.innerWidth >= 1024;
                 window.addEventListener('resize', () => {
@@ -241,6 +249,9 @@
                     name: item.name,
                     price: item.unit_price,
                     qty: item.quantity,
+                    is_gift_card: item.is_gift_card || false,
+                    custom_price: item.custom_price || null,
+                    allow_custom_amount: item.allow_custom_amount || false,
                     configType: (item.selling_method || 'per_piece').replace(/-/g, '_'),
                     unitLabel: item.unit_label || 'piece',
                     unitsPerOrder: item.units_per_order || 1,
@@ -323,6 +334,10 @@
             cart: {
                 items: [],
                 addOns: [],
+            },
+
+            get hasOnlyGiftCards() {
+                return this.cart.items.length > 0 && this.cart.items.every(i => i.is_gift_card);
             },
 
             // ─── ADDRESS AUTOCOMPLETE ─────────────────────────────────────────
@@ -465,22 +480,27 @@
                 if (!c.fullName.trim())  this.formErrors.fullName = 'Full name is required';
                 if (!c.email.trim())     this.formErrors.email    = 'Email address is required';
                 if (!c.phone.trim())     this.formErrors.phone    = 'Phone number is required';
-                if (!a.country)          this.formErrors.country  = 'Please select a country';
-                if (!a.street.trim())    this.formErrors.street   = 'Street address is required';
-                if (!a.city.trim())      this.formErrors.city     = 'City is required';
+
+                if (!this.hasOnlyGiftCards) {
+                    if (!a.country)          this.formErrors.country  = 'Please select a country';
+                    if (!a.street.trim())    this.formErrors.street   = 'Street address is required';
+                    if (!a.city.trim())      this.formErrors.city     = 'City is required';
+                }
 
                 if (Object.keys(this.formErrors).length > 0) {
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                     return;
                 }
 
-                if (this.shippingMethods.length === 0) {
-                    await this.fetchShippingOptions();
-                }
+                if (!this.hasOnlyGiftCards) {
+                    if (this.shippingMethods.length === 0) {
+                        await this.fetchShippingOptions();
+                    }
 
-                if (!this.form.shippingMethod && this.shippingMethods.length > 0) {
-                    this.formErrors.shippingMethod = 'Please select a shipping method';
-                    return;
+                    if (!this.form.shippingMethod && this.shippingMethods.length > 0) {
+                        this.formErrors.shippingMethod = 'Please select a shipping method';
+                        return;
+                    }
                 }
 
                 this.goTo(2);
@@ -499,7 +519,8 @@
                         shippingMethod: this.selectedShipping || { id: this.form.shippingMethod, price: this.shippingCost(), estimated_days: null },
                         paymentMethod:  this.form.paymentMethod,
                         promoCode:      this.promoApplied ? this.promoCode : null,
-                        pointsToRedeem: this.pointsToRedeem,   // ← the only addition
+                        pointsToRedeem: this.pointsToRedeem,
+                        giftCardCode:   this.giftCardApplied ? this.giftCardCode : '',
                     });
 
                     if (result && result.success) {
@@ -520,13 +541,40 @@
                 }
             },
 
-            incQty(item) { item.qty = Math.min(item.qty + (item.quantityStep || 1), item.stockQuantity || 999); },
+            incQty(item) {
+                if (item.is_gift_card) {
+                    Livewire.dispatch('cart:add', { productId: item.id, variantId: null, quantity: 1, customPrice: item.custom_price || null });
+                    return;
+                }
+                item.qty = Math.min(item.qty + (item.quantityStep || 1), item.stockQuantity || 999);
+            },
             decQty(item) {
+                if (item.is_gift_card) {
+                    if (item.cart_line_id) {
+                        Livewire.dispatch('cart:remove-line', { cartLineId: item.cart_line_id });
+                    }
+                    this.cart.items = this.cart.items.filter(i => i.cart_line_id !== item.cart_line_id);
+                    return;
+                }
                 const min = item.minQuantity || 1, step = item.quantityStep || 1;
                 if (item.qty - step >= min) item.qty -= step;
             },
-            removeItem(item)   { this.cart.items  = this.cart.items.filter(i => i.id !== item.id); },
+            removeItem(item) {
+                if (item.is_gift_card && item.cart_line_id) {
+                    this.cart.items = this.cart.items.filter(i => i.cart_line_id !== item.cart_line_id);
+                    Livewire.dispatch('cart:remove-line', { cartLineId: item.cart_line_id });
+                } else {
+                    this.cart.items = this.cart.items.filter(i => i.id !== item.id);
+                }
+            },
             removeAddon(addon) { this.cart.addOns = this.cart.addOns.filter(a => a.id !== addon.id); },
+            updateGiftCardPriceLocal(item, rawValue) {
+                const amount = parseInt(rawValue, 10) || 0;
+                if (amount <= 0) return;
+                item.price = amount;
+                item.custom_price = amount;
+                Alpine.store('cart').updateGiftCardPrice(item.cart_line_id, amount);
+            },
 
             // ─── UNIT LABEL ───────────────────────────────────────────────────
             unitLabel(item) {
@@ -563,11 +611,50 @@
             },
             clearPromo() { this.promoApplied = false; this.promoDiscount = 0; this.promoDiscountAmount = 0; this.promoCode = ''; this.promoError = ''; },
 
+            async applyGiftCard() {
+                const code = (this.giftCardCode || '').trim().toUpperCase();
+                if (!code) { this.giftCardError = 'Please enter a gift card code'; return; }
+                this.giftCardLoading = true;
+                this.giftCardError   = '';
+                try {
+                    const result = await this.$wire.validateGiftCard(code);
+                    if (result.valid) {
+                        this.giftCardBalance  = result.balance || 0;
+                        // Cap gift card discount to remaining payable amount
+                        const payableBeforeGC = Math.max(0,
+                            this.subtotal() + this.addOnsTotal()
+                            - this.promoSavings() - this.referralSavings() - this.pointsDiscount()
+                            + this.shippingCost()
+                        );
+                        this.giftCardDiscount = Math.min(this.giftCardBalance, payableBeforeGC);
+                        this.giftCardApplied  = true;
+                        this.giftCardError    = '';
+                    } else {
+                        this.giftCardError   = result.message || 'Invalid gift card code';
+                        this.giftCardApplied = false;
+                    }
+                } catch(e) {
+                    this.giftCardError = 'Could not validate gift card. Please try again.';
+                } finally {
+                    this.giftCardLoading = false;
+                }
+            },
+            clearGiftCard() { this.giftCardApplied = false; this.giftCardDiscount = 0; this.giftCardBalance = 0; this.giftCardCode = ''; this.giftCardError = ''; },
+
             subtotal()     { return this.cart.items.reduce((s, i) => s + i.price * i.qty, 0); },
             addOnsTotal()  { return (this.cart.addOns || []).reduce((s, a) => s + a.price * (a.qty || 1), 0); },
             promoSavings()    { return this.promoApplied ? Math.round(this.subtotal() * this.promoDiscount / 100) : 0; },
             referralSavings() { return (this.referralApplied && this.referralDiscountPct) ? Math.round(this.subtotal() * this.referralDiscountPct / 100) : 0; },
             pointsDiscount()  { return Math.round(this.pointsToRedeem * this.nairaPerPoint); },
+            giftCardSavings() {
+                if (!this.giftCardApplied) return 0;
+                const payableBeforeGC = Math.max(0,
+                    this.subtotal() + this.addOnsTotal()
+                    - this.promoSavings() - this.referralSavings() - this.pointsDiscount()
+                    + this.shippingCost()
+                );
+                return Math.min(this.giftCardDiscount, payableBeforeGC);
+            },
             shippingCost() {
                 const m = this.selectedShipping;
                 return m ? (m.price || 0) : 0;
@@ -579,6 +666,7 @@
                     - this.promoSavings()
                     - this.referralSavings()
                     - this.pointsDiscount()
+                    - this.giftCardSavings()
                     + this.shippingCost();
             },
 
@@ -608,7 +696,8 @@
                     <template x-if="currentStep <= 1"><span>1</span></template>
                 </div>
                 <span class="text-[10px] font-semibold tracking-wide"
-                      :class="currentStep === 1 ? 'text-brand' : currentStep > 1 ? 'text-neutral-500' : 'text-neutral-400 dark:text-neutral-600'">SHIPPING</span>
+                      :class="currentStep === 1 ? 'text-brand' : currentStep > 1 ? 'text-neutral-500' : 'text-neutral-400 dark:text-neutral-600'"
+                      x-text="hasOnlyGiftCards ? 'DETAILS' : 'SHIPPING'"></span>
             </div>
 
             <div class="co-connector" :class="currentStep > 1 ? 'done' : ''"></div>
@@ -745,8 +834,18 @@
                         </div>
                     </div>
 
+                    {{-- Digital delivery notice (gift-card-only orders) --}}
+                    <template x-if="hasOnlyGiftCards">
+                        <div class="flex items-start gap-3 px-4 py-3.5 border border-brand-200 dark:border-brand-800" style="background:#E6F3F2">
+                            <svg class="w-4 h-4 text-brand mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                            <p class="text-xs text-brand-700 dark:text-brand-200 leading-relaxed">
+                                <strong>Digital delivery</strong> — your gift card code(s) will be emailed to you immediately after payment is confirmed. No shipping address needed.
+                            </p>
+                        </div>
+                    </template>
+
                     {{-- Shipping Address --}}
-                    <div class="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700">
+                    <div x-show="!hasOnlyGiftCards" class="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700">
                         <div class="px-5 py-3 border-b border-neutral-200 dark:border-neutral-700">
                             <h2 class="font-display font-semibold text-neutral-900 dark:text-neutral-50 text-sm">Shipping Address</h2>
                         </div>
@@ -854,7 +953,7 @@
                     </div>
 
                     {{-- Shipping Method --}}
-                    <div class="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700">
+                    <div x-show="!hasOnlyGiftCards" class="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700">
                         <div class="px-5 py-3 border-b border-neutral-200 dark:border-neutral-700">
                             <h2 class="font-display font-semibold text-neutral-900 dark:text-neutral-50 text-sm">Shipping Method</h2>
                         </div>
@@ -927,9 +1026,10 @@
                         <div class="flex items-center gap-2.5">
                             <svg class="w-3.5 h-3.5 text-brand shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                             <div>
-                                <p class="text-[10px] text-neutral-400 dark:text-neutral-500 leading-none mb-0.5">Delivering to</p>
+                                <p class="text-[10px] text-neutral-400 dark:text-neutral-500 leading-none mb-0.5"
+                               x-text="hasOnlyGiftCards ? 'Digital delivery to' : 'Delivering to'"></p>
                                 <p class="text-sm font-medium text-neutral-900"
-                                   x-text="(form.address.street || '—') + (form.address.city ? ', ' + form.address.city : '')"></p>
+                                   x-text="hasOnlyGiftCards ? (form.contact.email || '—') : ((form.address.street || '—') + (form.address.city ? ', ' + form.address.city : ''))"></p>
                             </div>
                         </div>
                         <button @click="goTo(1)" class="text-xs font-medium text-brand dark:text-brand-300 hover:text-brand-600 dark:hover:text-brand-200 transition-colors">Change</button>
@@ -1138,7 +1238,12 @@
                                                 <span class="text-[10px] text-neutral-400 dark:text-neutral-500" x-text="item.variant.name"></span>
                                             </div>
                                         </template>
-                                        <p class="text-[10px] text-neutral-400 dark:text-neutral-500 mt-0.5" x-text="unitLabel(item)"></p>
+                                        <template x-if="!item.is_gift_card">
+                                            <p class="text-[10px] text-neutral-400 dark:text-neutral-500 mt-0.5" x-text="unitLabel(item)"></p>
+                                        </template>
+                                        <template x-if="item.is_gift_card">
+                                            <p class="text-[10px] text-brand mt-0.5">1 gift code</p>
+                                        </template>
                                         <div class="flex items-center mt-1.5 gap-0">
                                             <button @click="decQty(item)" class="qty-btn">−</button>
                                             <div class="qty-display" x-text="item.qty"></div>
@@ -1147,10 +1252,24 @@
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                             </button>
                                         </div>
+                                        <template x-if="item.is_gift_card">
+                                            <div class="flex items-center gap-1 mt-1.5">
+                                                <span class="text-[10px] text-neutral-400">₦</span>
+                                                <input type="number" min="1"
+                                                    :value="item.custom_price || item.price"
+                                                    @change="updateGiftCardPriceLocal(item, $event.target.value)"
+                                                    class="w-24 text-xs border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-brand">
+                                            </div>
+                                        </template>
                                     </div>
                                     <div class="text-right shrink-0">
                                         <p class="text-sm font-semibold text-neutral-900 dark:text-neutral-50" x-text="fmt(item.price * item.qty)"></p>
-                                        <p class="text-[10px] text-neutral-400 dark:text-neutral-500" x-text="fmt(item.price) + '/unit'"></p>
+                                        <template x-if="!item.is_gift_card">
+                                            <p class="text-[10px] text-neutral-400 dark:text-neutral-500" x-text="fmt(item.price) + '/unit'"></p>
+                                        </template>
+                                        <template x-if="item.is_gift_card">
+                                            <p class="text-[10px] text-brand">1 code</p>
+                                        </template>
                                     </div>
                                 </div>
                             </template>
@@ -1228,6 +1347,13 @@
                                 </div>
                             </template>
 
+                            <template x-if="giftCardApplied && giftCardSavings() > 0">
+                                <div class="flex justify-between text-xs text-brand">
+                                    <span>Gift card</span>
+                                    <span>− <span x-text="fmt(giftCardSavings())"></span></span>
+                                </div>
+                            </template>
+
 
                         </div>
 
@@ -1287,6 +1413,73 @@
                             </div>
                         </template>
 
+                        {{-- ── Gift Card ───────────────────────────────── --}}
+                        <div class="px-5 py-3 border-t border-neutral-100 dark:border-neutral-700">
+                            <button
+                                @click="showGiftCard = !showGiftCard"
+                                class="flex items-center justify-between w-full text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:text-brand transition-colors"
+                            >
+                                <span class="flex items-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <rect x="2" y="7" width="20" height="14" rx="2" stroke-width="2"/>
+                                        <path d="M16 7V5a2 2 0 0 0-4 0v2M8 7V5a2 2 0 0 1 4 0v2" stroke-width="2"/>
+                                        <line x1="2" y1="12" x2="22" y2="12" stroke-width="2"/>
+                                    </svg>
+                                    Have a gift card?
+                                </span>
+                                <svg class="w-3 h-3 transition-transform" :class="showGiftCard ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9" stroke-width="2"/></svg>
+                            </button>
+
+                            <template x-if="showGiftCard">
+                                <div class="mt-3 space-y-2">
+                                    <template x-if="!giftCardApplied">
+                                        <div>
+                                            <div class="flex rounded-lg overflow-hidden border border-neutral-200 dark:border-neutral-700">
+                                                <input
+                                                    x-model="giftCardCode"
+                                                    @keydown.enter="applyGiftCard()"
+                                                    type="text"
+                                                    maxlength="19"
+                                                    placeholder="DLT-XXXX-XXXX-XXXX"
+                                                    autocomplete="off"
+                                                    spellcheck="false"
+                                                    class="co-field flex-1 min-w-0"
+                                                    style="border-right:none;text-transform:uppercase;font-size:12px;letter-spacing:1px;font-family:monospace;"
+                                                >
+                                                <button
+                                                    @click="applyGiftCard()"
+                                                    :disabled="giftCardLoading"
+                                                    class="px-3 py-2 bg-neutral-900 text-white text-xs font-semibold hover:bg-neutral-800 disabled:opacity-50 transition-colors whitespace-nowrap"
+                                                >
+                                                    <span x-show="!giftCardLoading">Apply</span>
+                                                    <span x-show="giftCardLoading">…</span>
+                                                </button>
+                                            </div>
+                                            <p x-show="giftCardError" class="text-[10px] text-red-500 mt-1" x-text="giftCardError"></p>
+                                        </div>
+                                    </template>
+                                    <template x-if="giftCardApplied">
+                                        <div class="co-notice-brand flex items-center justify-between px-3 py-2" style="background:#E6F3F2;border:1px solid #99CFC9">
+                                            <div class="flex items-center gap-1.5">
+                                                <svg class="w-3.5 h-3.5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <rect x="2" y="7" width="20" height="14" rx="2" stroke-width="2"/>
+                                                    <path d="M16 7V5a2 2 0 0 0-4 0v2M8 7V5a2 2 0 0 1 4 0v2" stroke-width="2"/>
+                                                    <line x1="2" y1="12" x2="22" y2="12" stroke-width="2"/>
+                                                </svg>
+                                                <div>
+                                                    <span class="text-xs font-semibold text-brand dark:text-brand-300 font-mono"
+                                                          x-text="giftCardCode.toUpperCase()"></span>
+                                                    <span class="text-[10px] text-brand ml-1.5"
+                                                          x-text="'(₦' + giftCardBalance.toLocaleString() + ' available)'"></span>
+                                                </div>
+                                            </div>
+                                            <button @click="clearGiftCard()" class="text-[10px] font-medium text-brand hover:text-brand-600">Remove</button>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+
                         
 
                         {{-- ── Totals ──────────────────────────────────── --}}
@@ -1309,6 +1502,12 @@
                                 <span>Shipping</span>
                                 <span x-text="shippingLoading ? 'Calculating…' : (shippingCost() === 0 ? (form.shippingMethod ? 'Free' : 'TBD') : fmt(shippingCost()))"></span>
                             </div>
+                            <template x-if="giftCardApplied && giftCardSavings() > 0">
+                                <div class="flex justify-between text-xs text-brand">
+                                    <span>Gift card</span>
+                                    <span>− <span x-text="fmt(giftCardSavings())"></span></span>
+                                </div>
+                            </template>
                             <div class="flex justify-between pt-2 border-t border-neutral-200 dark:border-neutral-700">
                                 <span class="text-sm font-semibold text-neutral-800 dark:text-neutral-100">Total</span>
                                 <span class="font-display font-bold text-neutral-900" style="font-size:15px" x-text="fmt(getTotal())"></span>

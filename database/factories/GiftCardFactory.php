@@ -10,15 +10,35 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class GiftCardFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
     public function definition(): array
     {
+        $balance = fake()->randomElement([5000, 10000, 25000, 50000]);
+
         return [
-            //
+            'code' => 'DLT-'.strtoupper(fake()->bothify('????-????-????')),
+            'status' => 'active',
+            'initial_balance' => $balance,
+            'current_balance' => $balance,
+            'recipient_email' => fake()->optional()->safeEmail(),
+            'recipient_name' => fake()->optional()->name(),
+            'is_pos_issued' => false,
+            'expires_at' => null,
         ];
+    }
+
+    public function redeemed(): static
+    {
+        return $this->state(fn () => [
+            'status' => 'redeemed',
+            'current_balance' => 0,
+        ]);
+    }
+
+    public function expired(): static
+    {
+        return $this->state(fn () => [
+            'status' => 'active',
+            'expires_at' => now()->subDay(),
+        ]);
     }
 }

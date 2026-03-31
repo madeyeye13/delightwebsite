@@ -50,10 +50,22 @@
             border-radius: 0 4px 4px 0;
         }
 
-        /* Page fade-in */
+        /* Page fade-in — NOTE: no transform here, because transform creates a new
+           stacking context that breaks position:fixed modals inside Livewire
+           components (makes them position relative to the animated div, not
+           the viewport, so they can't cover the fixed admin header). */
         @keyframes pageFadeIn {
-            from { opacity: 0; transform: translateY(6px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Nav badge blink — used for new orders alert */
+        @keyframes navBadgeBlink {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.35; }
+        }
+        .nav-badge-blink {
+            animation: navBadgeBlink 1.1s ease-in-out infinite;
         }
         .page-enter {
             animation: pageFadeIn 0.25s ease-out forwards;
@@ -112,6 +124,24 @@
                     }
                 },
             }));
+
+            // Nav badge count store — populated by livewire:admin.nav-counts via
+            // the 'nav-counts-updated' browser event (dispatched every 30 s).
+            // counts.orders      → pending paid orders
+            // counts.orders_new  → pending paid orders since last acknowledged
+            // counts.products    → total product count
+            // To add a new badge: add a key to NavCounts::getCounts() in PHP,
+            // then read $store.navCounts.counts.yourKey in the sidebar.
+            Alpine.store('navCounts', {
+                counts: { orders: 0, orders_new: 0, products: 0 },
+            });
+        });
+
+        // Listen for count updates dispatched by the NavCounts Livewire component
+        window.addEventListener('nav-counts-updated', (e) => {
+            if (e.detail && e.detail.counts) {
+                Object.assign(Alpine.store('navCounts').counts, e.detail.counts);
+            }
         });
 
         // Prevent flash of wrong theme
@@ -176,6 +206,7 @@
             @include('partials.admin.header')
 
             <livewire:admin.media.media-picker />
+            <livewire:admin.nav-counts />
 
             {{-- Page content --}}
             <main class="admin-content flex-1 overflow-y-auto transition-colors duration-200">

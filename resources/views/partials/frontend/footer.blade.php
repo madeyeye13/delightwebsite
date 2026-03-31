@@ -114,7 +114,7 @@
                 <h3 class="text-xs font-semibold uppercase tracking-[1.5px] text-brand-400 mb-5">Help & Support</h3>
                 <ul class="space-y-3" role="list">
                     <li>
-                        <a href="#" class="text-sm text-white/70 hover:text-brand-400 transition-colors duration-200">FAQs</a>
+                        <a href="{{ route('faq') }}" class="text-sm text-white/70 hover:text-brand-400 transition-colors duration-200">FAQs</a>
                     </li>
                     <li>
                         <a href="#" class="text-sm text-white/70 hover:text-brand-400 transition-colors duration-200">Shipping Info</a>
@@ -137,89 +137,41 @@
                 <p class="text-sm text-white/60 leading-relaxed mb-5">
                     Get new arrivals, exclusive offers, and fabric inspiration straight to your inbox.
                 </p>
-                <div
-                    x-data="{
-                        email: '',
-                        status: '',   {{-- '' | 'loading' | 'success' | 'error' --}}
-                        message: '',
-                        async submit() {
-                            if (!this.email || !this.email.includes('@')) {
-                                this.status = 'error';
-                                this.message = 'Please enter a valid email address.';
-                                return;
-                            }
-                            this.status = 'loading';
-                            await new Promise(r => setTimeout(r, 800));
-                            this.status = 'success';
-                            this.message = 'You\'re subscribed — welcome!';
-                            this.email = '';
-                        }
-                    }"
-                >
-                    <template x-if="status === 'success'">
-                        <div class="flex items-center gap-2.5 text-sm text-emerald-400">
-                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                            </svg>
-                            <span x-text="message"></span>
-                        </div>
-                    </template>
-                    <template x-if="status !== 'success'">
-                        <div>
-                            <div class="flex gap-0">
-                                <label for="footer-newsletter-email" class="sr-only">Email address</label>
-                                <input
-                                    id="footer-newsletter-email"
-                                    type="email"
-                                    x-model="email"
-                                    @keydown.enter="submit()"
-                                    placeholder="Your email address"
-                                    :disabled="status === 'loading'"
-                                    class="flex-1 min-w-0 px-3.5 py-2.5 text-sm appearance-none bg-white/[0.08] border border-white/20 border-r-0 rounded-l text-white placeholder-white/35 focus:outline-none focus:border-white/40 focus:bg-white/[0.12] transition-colors duration-200 disabled:opacity-50"
-                                    autocomplete="email"
-                                >
-                                <button
-                                    @click="submit()"
-                                    :disabled="status === 'loading'"
-                                    class="shrink-0 px-4 py-2.5 bg-brand-500 text-white text-xs font-semibold tracking-wide rounded-r hover:bg-brand-400 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    aria-label="Subscribe to newsletter"
-                                >
-                                    <span x-show="status !== 'loading'">Subscribe</span>
-                                    <span x-show="status === 'loading'" style="display:none">
-                                        <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                                        </svg>
-                                    </span>
-                                </button>
-                            </div>
-                            <template x-if="status === 'error'">
-                                <p x-text="message" class="mt-2 text-xs text-red-400"></p>
-                            </template>
-                            <p class="mt-3 text-xs text-white/30">No spam. Unsubscribe anytime.</p>
-                        </div>
-                    </template>
-                </div>
+                <livewire:frontend.newsletter-subscribe />
             </div>
 
             {{-- ── COLUMN 5: Contact & Currency ── --}}
             <div>
                 <h3 class="text-xs font-semibold uppercase tracking-[1.5px] text-brand-400 mb-5">Get in Touch</h3>
+                @php
+                    $footerEmail   = \App\Models\AppSetting::get('store_email',   'hello@delightsome.com');
+                    $footerPhone   = \App\Models\AppSetting::get('store_phone',   '+234 800 000 0000');
+                    $footerAddress = \App\Models\AppSetting::get('store_address', '30b Opebi Rd, Opebi');
+                    $footerCity    = \App\Models\AppSetting::get('store_city',    'Ikeja Lagos 100281');
+                @endphp
                 <ul class="space-y-3 mb-7" role="list">
                     <li>
-                        <a href="mailto:hello@delightsome.com" class="flex items-center gap-2.5 text-sm text-white/70 hover:text-brand-400 transition-colors duration-200">
+                        <a href="{{ route('contact') }}" class="flex items-center gap-2.5 text-sm text-white/70 hover:text-brand-400 transition-colors duration-200">
                             <svg class="w-4 h-4 shrink-0 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3v-3z"/>
                             </svg>
-                            hello@delightsome.com
+                            Send Us a Message
                         </a>
                     </li>
                     <li>
-                        <a href="tel:+2348000000000" class="flex items-center gap-2.5 text-sm text-white/70 hover:text-brand-400 transition-colors duration-200">
+                        <a href="mailto:{{ $footerEmail }}" class="flex items-center gap-2.5 text-sm text-white/70 hover:text-brand-400 transition-colors duration-200">
+                            <svg class="w-4 h-4 shrink-0 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                            </svg>
+                            {{ $footerEmail }}
+                        </a>
+                    </li>
+                    <li>
+                        <a href="tel:{{ preg_replace('/\s+/', '', $footerPhone) }}" class="flex items-center gap-2.5 text-sm text-white/70 hover:text-brand-400 transition-colors duration-200">
                             <svg class="w-4 h-4 shrink-0 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
                             </svg>
-                            +234 800 000 0000
+                            {{ $footerPhone }}
                         </a>
                     </li>
                     <li class="flex items-start gap-2.5">
@@ -227,7 +179,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
                         </svg>
-                        <span class="text-sm text-white/60 leading-relaxed">30b Opebi Rd, Opebi,<br>Ikeja Lagos 100281</span>
+                        <span class="text-sm text-white/60 leading-relaxed">{{ $footerAddress }},<br>{{ $footerCity }}</span>
                     </li>
                 </ul>
 
@@ -328,11 +280,11 @@
 
             {{-- Legal links --}}
             <nav class="flex items-center gap-5 order-1 sm:order-2" aria-label="Legal">
-                <a href="#" class="text-xs text-white/50 hover:text-brand-400 transition-colors duration-200">Privacy Policy</a>
+                <a href="{{ route('privacy') }}" class="text-xs text-white/50 hover:text-brand-400 transition-colors duration-200">Privacy Policy</a>
                 <span class="text-white/20 text-xs" aria-hidden="true">·</span>
-                <a href="#" class="text-xs text-white/50 hover:text-brand-400 transition-colors duration-200">Return Policy</a>
+                <a href="{{ route('return-policy') }}" class="text-xs text-white/50 hover:text-brand-400 transition-colors duration-200">Return Policy</a>
                 <span class="text-white/20 text-xs" aria-hidden="true">·</span>
-                <a href="#" class="text-xs text-white/50 hover:text-brand-400 transition-colors duration-200">Terms &amp; Conditions</a>
+                <a href="{{ route('terms') }}" class="text-xs text-white/50 hover:text-brand-400 transition-colors duration-200">Terms &amp; Conditions</a>
             </nav>
         </div>
     </div>

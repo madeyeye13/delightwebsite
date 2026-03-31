@@ -1,6 +1,29 @@
 @extends('layouts.custom', ['alwaysShowHeaderBg' => true])
 
 @section('content')
+{{-- ── Alpine store init: theme (dark mode) ───────────────────────────────── --}}
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.store('theme', {
+            dark: localStorage.getItem('theme') === 'dark'
+                || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches),
+            toggle() {
+                this.dark = !this.dark;
+                localStorage.setItem('theme', this.dark ? 'dark' : 'light');
+            }
+        });
+    });
+    // Apply dark class immediately to avoid flash of unstyled content
+    (function() {
+        var saved = localStorage.getItem('theme');
+        if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    })();
+</script>
+
 <div class="bg-neutral-50 dark:bg-neutral-900 min-h-screen pt-40 pb-16">
     <div class="max-w-xl mx-auto px-4 py-10 text-center">
 
@@ -23,8 +46,34 @@
             <span class="font-mono font-bold text-neutral-900 dark:text-neutral-50">{{ $orderNumber }}</span>
         </div>
 
+        @if(!empty($giftCodes))
+        <div class="mt-2 mb-6 text-left w-full">
+            <p class="text-xs font-semibold text-neutral-700 dark:text-neutral-200 mb-3 text-center">
+                Your Gift Card Code{{ count($giftCodes) > 1 ? 's' : '' }}
+            </p>
+            <div class="space-y-2">
+                @foreach($giftCodes as $gc)
+                <div class="flex items-center justify-between px-4 py-3 bg-brand-50 dark:bg-brand-950/30 border border-brand-200 dark:border-brand-800">
+                    <div>
+                        <p class="font-mono font-bold text-neutral-900 dark:text-neutral-50 text-sm tracking-wider">{{ $gc['code'] }}</p>
+                        <p class="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">Value: ₦{{ number_format($gc['initial_balance']) }}</p>
+                    </div>
+                    <svg class="w-5 h-5 text-brand shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                </div>
+                @endforeach
+            </div>
+            <p class="text-[11px] text-neutral-400 dark:text-neutral-500 mt-3 text-center">
+                These codes have also been sent to your email. Use them at checkout to redeem their value.
+            </p>
+        </div>
+        @endif
+
         <p class="text-sm text-neutral-500 dark:text-neutral-400 mb-7">
-            A confirmation email with your order details has been sent. We'll process and dispatch your order within 1–2 business days.
+            @if(!empty($giftCodes))
+                Your gift card codes are shown above and have been sent to your email.
+            @else
+                A confirmation email with your order details has been sent. We'll process and dispatch your order within 1–2 business days.
+            @endif
         </p>
 
         <a href="{{ route('shop.index') }}"

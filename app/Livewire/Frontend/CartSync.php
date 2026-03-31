@@ -31,7 +31,7 @@ class CartSync extends Component
      * Payload keys must match the Alpine cart item shape.
      */
     #[On('cart:add')]
-    public function addItem(int $productId, ?int $variantId = null, int $quantity = 1): void
+    public function addItem(int $productId, ?int $variantId = null, int $quantity = 1, ?int $customPrice = null): void
     {
         $product = Product::with(['category', 'sellingMethod', 'media'])->find($productId);
         if (! $product) {
@@ -40,20 +40,27 @@ class CartSync extends Component
 
         $cart = $this->resolveCart(create: true);
 
-        $existing = $cart->items()
-            ->where('product_id', $productId)
-            ->where('variant_id', $variantId)
-            ->first();
+        // Gift cards always create a separate line — each line represents one unique code
+        if (! $product->is_gift_card) {
+            $existing = $cart->items()
+                ->where('product_id', $productId)
+                ->where('variant_id', $variantId)
+                ->first();
 
-        if ($existing) {
-            $existing->increment('quantity', $quantity);
-        } else {
-            $cart->items()->create([
-                'product_id' => $productId,
-                'variant_id' => $variantId,
-                'quantity' => max(1, $quantity),
-            ]);
+            if ($existing) {
+                $existing->increment('quantity', $quantity);
+                $this->dispatch('cart:synced', items: $this->buildAlpineItems($cart->fresh()->load('items.product.media', 'items.product.sellingMethod', 'items.product.category.parent', 'items.variant.media')));
+
+                return;
+            }
         }
+
+        $cart->items()->create([
+            'product_id' => $productId,
+            'variant_id' => $variantId,
+            'quantity' => $product->is_gift_card ? 1 : max(1, $quantity),
+            'custom_price' => $product->is_gift_card && $customPrice ? $customPrice : null,
+        ]);
 
         $this->dispatch('cart:synced', items: $this->buildAlpineItems($cart->fresh()->load('items.product.media', 'items.product.sellingMethod', 'items.product.category.parent', 'items.variant.media')));
     }
@@ -81,6 +88,41 @@ class CartSync extends Component
                 $item->update(['quantity' => $quantity]);
             }
         }
+    }
+
+    /**
+     * Update the denomination of a gift card line.
+     * Dispatched by Alpine updateGiftCardPrice().
+     */
+    #[On('cart:update-gift-card-price')]
+    public function updateGiftCardPrice(int $cartLineId, int $price): void
+    {
+        $cart = $this->resolveCart(create: false);
+        if (! $cart) {
+            return;
+        }
+
+        $item = $cart->items()->with('product')->where('id', $cartLineId)->first();
+        if ($item && $item->product?->is_gift_card) {
+            $item->update(['custom_price' => max(1, $price)]);
+            $this->dispatch('cart:synced', items: $this->buildAlpineItems($cart->fresh()->load('items.product.media', 'items.product.sellingMethod', 'items.product.category.parent', 'items.variant.media')));
+        }
+    }
+
+    /**
+     * Remove a specific cart line by ID (safe for gift cards with multiple same-product lines).
+     * Dispatched by Alpine removeItemByLine().
+     */
+    #[On('cart:remove-line')]
+    public function removeLine(int $cartLineId): void
+    {
+        $cart = $this->resolveCart(create: false);
+        if (! $cart) {
+            return;
+        }
+
+        $cart->items()->where('id', $cartLineId)->delete();
+        $this->dispatch('cart:synced', items: $this->buildAlpineItems($cart->fresh()->load('items.product.media', 'items.product.sellingMethod', 'items.product.category.parent', 'items.variant.media')));
     }
 
     /**
@@ -130,6 +172,7 @@ class CartSync extends Component
                     'product_id' => $item->product_id,
                     'variant_id' => $item->variant_id,
                     'quantity' => $item->quantity,
+                    'custom_price' => $item->custom_price,
                 ]);
             }
         }
@@ -217,6 +260,11 @@ class CartSync extends Component
 
                 $unitPrice = $product->final_price + ($variant->price_adjustment ?? 0);
 
+                // For gift cards with custom amount, use stored custom_price
+                if ($product->is_gift_card && $item->custom_price) {
+                    $unitPrice = $item->custom_price;
+                }
+
                 return [
                     'cart_line_id' => $item->id,
                     'product_id' => $product->id,
@@ -241,6 +289,9 @@ class CartSync extends Component
                     ] : null,
                     'unit_price' => $unitPrice,
                     'total_price' => $unitPrice * $item->quantity,
+                    'is_gift_card' => (bool) $product->is_gift_card,
+                    'allow_custom_amount' => (bool) $product->allow_custom_amount,
+                    'custom_price' => $item->custom_price,
                     'suggested_add_ons' => $product->show_add_ons_in_cart
                         ? $product->addOns->map(function (Product $addOn): array {
                             $addOnUnitLabel = $addOn->unit_label ?: ucfirst(str_replace('per-', '', $addOn->sellingMethod?->config_type ?? 'piece'));

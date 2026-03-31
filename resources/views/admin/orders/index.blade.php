@@ -7,5 +7,5 @@
     <span class="text-xs text-emerald-500 font-medium">Orders</span>
 @endsection
 @section('content')
-<livewire:admin.orders.order-index />
+<livewire:admin.orders.order-index :highlight-order-id="$highlightOrderId ?? null" />
 @endsection

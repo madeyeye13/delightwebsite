@@ -218,7 +218,8 @@ $p['sellingMethod'] = str_replace('_', '-', $p['sellingMethod']);
 $finalPriceInt = (int) round((float) $p['finalPrice']);
 
 $stock = (int) $p['stockQuantity'];
-$stockStatus = $stock <= 0 ? 'out' : ($stock <= 10 ? 'low' : 'high');
+$isGiftCardProduct = (bool) ($p['isGiftCard'] ?? false);
+$stockStatus = $isGiftCardProduct ? 'high' : ($stock <= 0 ? 'out' : ($stock <= 10 ? 'low' : 'high'));
 
 $hasDiscount     = !empty($p['discountType']) && $p['discountValue'] > 0;
 $hasComparePrice = ($p['comparePrice'] ?? 0) > $p['price'];
@@ -272,6 +273,9 @@ window.__pdp = {
     metaDescription:"{{ e($p['metaDescription'] ?? '') }}",
     // ── Related catalog products (each becomes its own cart line) ─────────
     addOns:         {!! json_encode(array_values((array) $p['addOns'])) !!},
+    // ── Gift card flags ───────────────────────────────────────────────────
+    isGiftCard:     {{ json_encode((bool)($p['isGiftCard'] ?? false)) }},
+    allowCustomAmount: {{ json_encode((bool)($p['allowCustomAmount'] ?? false)) }},
 };
 </script>
 <div
@@ -370,7 +374,7 @@ window.__pdp = {
                     {{ $p['category'] }}
                 </span>
 
-                <template x-if="stockQty <= 0">
+                <template x-if="stockQty <= 0 && !isGiftCard">
                     <span class="inline-flex items-center gap-1.5 font-sans text-2xs font-semibold tracking-wide uppercase px-2.5 py-1 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20">
                         <span class="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0"></span>Out of Stock
                     </span>
@@ -425,6 +429,7 @@ window.__pdp = {
                         <p class="font-sans text-xs font-medium text-neutral-700 dark:text-neutral-300">{{ $p['category'] }}</p>
                     </div>
                 </div>
+                @if(!($p['isGiftCard'] ?? false))
                 <div class="flex items-center gap-2">
                     <svg viewBox="0 0 24 24" fill="none" class="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500 flex-shrink-0"><rect x="2" y="7" width="20" height="14" rx="1" stroke="currentColor" stroke-width="1.5"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" stroke="currentColor" stroke-width="1.5"/></svg>
                     <div>
@@ -439,18 +444,34 @@ window.__pdp = {
                         <p class="font-sans text-xs font-medium text-neutral-700 dark:text-neutral-300">{{ $p['unitLabel'] ?: ucfirst(str_replace('per-', '', $p['sellingMethod'])) }}</p>
                     </div>
                 </div>
+                @else
                 <div class="flex items-center gap-2">
-                    <template x-if="stockQty <= 0">
+                    <svg viewBox="0 0 24 24" fill="none" class="w-3.5 h-3.5 text-brand flex-shrink-0"><rect x="2" y="7" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M16 7V5a2 2 0 0 0-4 0v2M8 7V5a2 2 0 0 1 4 0v2" stroke="currentColor" stroke-width="1.5"/></svg>
+                    <div>
+                        <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 uppercase tracking-wider leading-none mb-0.5">Type</p>
+                        <p class="font-sans text-xs font-medium text-brand">Digital Gift Card</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <svg viewBox="0 0 24 24" fill="none" class="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500 flex-shrink-0"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" stroke-width="1.5"/><polyline points="22,6 12,13 2,6" stroke="currentColor" stroke-width="1.5"/></svg>
+                    <div>
+                        <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 uppercase tracking-wider leading-none mb-0.5">Delivery</p>
+                        <p class="font-sans text-xs font-medium text-neutral-700 dark:text-neutral-300">Email · No shipping</p>
+                    </div>
+                </div>
+                @endif
+                <div class="flex items-center gap-2">
+                    <template x-if="stockQty <= 0 && !isGiftCard">
                         <svg viewBox="0 0 24 24" fill="none" class="w-3.5 h-3.5 text-red-400 flex-shrink-0"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/><path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
                     </template>
-                    <template x-if="stockQty > 0">
+                    <template x-if="stockQty > 0 || isGiftCard">
                         <svg viewBox="0 0 24 24" fill="none" class="w-3.5 h-3.5 text-brand flex-shrink-0"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </template>
                     <div>
                         <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 uppercase tracking-wider leading-none mb-0.5">Availability</p>
                         <p class="font-sans text-xs font-medium"
-                           :class="stockQty <= 0 ? 'text-red-500' : stockQty <= 10 ? 'text-accent-600 dark:text-accent-400' : 'text-brand'"
-                           x-text="stockQty <= 0 ? 'Unavailable' : stockQty <= 10 ? stockQty + ' remaining' : 'Available'">
+                           :class="isGiftCard ? 'text-brand' : stockQty <= 0 ? 'text-red-500' : stockQty <= 10 ? 'text-accent-600 dark:text-accent-400' : 'text-brand'"
+                           x-text="isGiftCard ? 'Available' : stockQty <= 0 ? 'Unavailable' : stockQty <= 10 ? stockQty + ' remaining' : 'Available'">
                         </p>
                     </div>
                 </div>
@@ -496,7 +517,8 @@ window.__pdp = {
             </div>
             @endif
 
-            {{-- Selling details --}}
+            {{-- Selling details (hidden for gift cards) --}}
+            @if(!($p['isGiftCard'] ?? false))
             <div class="border border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/40 p-4 space-y-2.5">
 
                 @if($p['sellingMethod'] === 'per-length')
@@ -543,9 +565,10 @@ window.__pdp = {
                     <p class="font-sans text-xs text-neutral-500 dark:text-neutral-400">Selling method: {{ $p['sellingMethod'] }}</p>
                 @endif
             </div>
+            @endif
 
-            {{-- Quantity selector + live summary --}}
-            <div x-show="stockQty > 0" class="space-y-3">
+            {{-- Quantity selector + live summary (physical products only) --}}
+            <div x-show="stockQty > 0 && !isGiftCard" class="space-y-3">
                 <div class="flex items-center gap-4">
                     <span class="font-sans text-xs font-semibold tracking-wider uppercase text-neutral-500 dark:text-neutral-400 w-20 flex-shrink-0">Quantity</span>
                     <div class="flex items-center border border-neutral-200 dark:border-neutral-700">
@@ -643,8 +666,45 @@ window.__pdp = {
                 </div>
             </div>
 
+            {{-- ── GIFT CARD DENOMINATION ──────────────────────────────── --}}
+            @if($p['isGiftCard'] ?? false)
+            <div class="space-y-3">
+                @if($p['allowCustomAmount'] ?? false)
+                {{-- Custom amount input --}}
+                <div>
+                    <label class="font-sans text-xs font-semibold tracking-wider uppercase text-neutral-500 dark:text-neutral-400 block mb-2">Gift Card Amount</label>
+                    <div class="flex items-center border border-neutral-200 dark:border-neutral-700 overflow-hidden">
+                        <span class="px-3 py-2.5 bg-neutral-50 dark:bg-neutral-800 font-sans text-sm font-semibold text-neutral-600 dark:text-neutral-400 border-r border-neutral-200 dark:border-neutral-700 select-none">₦</span>
+                        <input type="number" x-model.number="customAmount" :min="basePrice" step="100"
+                               class="flex-1 px-3 py-2.5 font-sans text-sm font-semibold text-neutral-900 dark:text-white bg-white dark:bg-transparent focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand"
+                               @change="customAmount = Math.max(basePrice, Number(customAmount) || 0)" />
+                    </div>
+                    <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 mt-1">Minimum: <span x-text="$store.currency ? $store.currency.format(basePrice) : '₦' + basePrice.toLocaleString()"></span></p>
+                </div>
+                @else
+                {{-- Fixed denomination --}}
+                <div class="flex items-center gap-4">
+                    <span class="font-sans text-xs font-semibold tracking-wider uppercase text-neutral-500 dark:text-neutral-400 w-20 flex-shrink-0">Amount</span>
+                    <span class="font-sans text-sm font-semibold text-neutral-900 dark:text-white" x-text="$store.currency ? $store.currency.format(basePrice) : '₦' + basePrice.toLocaleString()"></span>
+                    <span class="font-sans text-2xs text-brand bg-brand/10 px-2 py-0.5">Fixed</span>
+                </div>
+                @endif
+                {{-- Gift card value summary --}}
+                <div class="bg-brand-50 dark:bg-brand-900/20 border border-brand-100 dark:border-brand-800/40 px-4 py-3">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <p class="font-sans text-xs text-brand-700 dark:text-brand-300 font-medium">Gift Card Value</p>
+                            <p class="font-sans text-2xs text-brand-500 dark:text-brand-400">Digital · Delivered by email</p>
+                        </div>
+                        <p class="font-display text-lg font-bold text-brand-700 dark:text-brand-200"
+                           x-text="$store.currency ? $store.currency.format(grandTotal) : '₦' + grandTotal.toLocaleString()"></p>
+                    </div>
+                </div>
+            </div>
+            @endif
+
             {{-- ── INLINE ADD-ONS ───────────────────────────────────────── --}}
-            @if($hasAddOns)
+            @if($hasAddOns && !($p['isGiftCard'] ?? false))
             <div class="space-y-2.5">
                 <p class="font-sans text-xs font-semibold tracking-wider uppercase text-neutral-500 dark:text-neutral-400">Complete the Look</p>
                 <div class="space-y-2">
@@ -727,12 +787,12 @@ window.__pdp = {
             {{-- CTA buttons --}}
             <div class="flex flex-col sm:flex-row gap-3 pt-1">
                 @if($stockStatus !== 'out')
-                <button @click="addToCart()" :disabled="isAdding || stockQty <= 0" class="flex-1 inline-flex items-center justify-center gap-2.5 px-6 py-3.5 bg-brand hover:bg-brand-600 active:bg-brand-700 text-white font-sans text-sm font-semibold tracking-wide transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 dark:focus:ring-offset-ink disabled:opacity-50 disabled:cursor-not-allowed">
+                <button @click="addToCart()" :disabled="isAdding || (stockQty <= 0 && !isGiftCard)" class="flex-1 inline-flex items-center justify-center gap-2.5 px-6 py-3.5 bg-brand hover:bg-brand-600 active:bg-brand-700 text-white font-sans text-sm font-semibold tracking-wide transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 dark:focus:ring-offset-ink disabled:opacity-50 disabled:cursor-not-allowed">
                     <svg x-show="!isAdding" viewBox="0 0 24 24" fill="none" class="w-4 h-4 flex-shrink-0"><path d="M5 6.5h16l-2.024 10H7.024L5 6.5Zm0 0L4.364 3H1" stroke="currentColor" stroke-width="1.4"/><circle cx="8.5" cy="20.5" r="1" stroke="currentColor" stroke-width="1.4"/><circle cx="17.5" cy="20.5" r="1" stroke="currentColor" stroke-width="1.4"/></svg>
                     <svg x-show="isAdding" class="w-4 h-4 animate-spin flex-shrink-0" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" stroke-dasharray="31.4 31.4" stroke-linecap="round"/></svg>
                     <span x-text="isAdding ? 'Adding…' : 'Add to Cart'"></span>
                 </button>
-                <button @click="buyNow()" :disabled="isBuying || isAdding || stockQty <= 0" class="flex-1 inline-flex items-center justify-center gap-2.5 px-6 py-3.5 bg-neutral-900 dark:bg-white hover:bg-neutral-700 dark:hover:bg-neutral-100 text-white dark:text-neutral-900 font-sans text-sm font-semibold tracking-wide transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:ring-offset-2 dark:focus:ring-offset-ink disabled:opacity-50 disabled:cursor-not-allowed">
+                <button @click="buyNow()" :disabled="isBuying || isAdding || (stockQty <= 0 && !isGiftCard)" class="flex-1 inline-flex items-center justify-center gap-2.5 px-6 py-3.5 bg-neutral-900 dark:bg-white hover:bg-neutral-700 dark:hover:bg-neutral-100 text-white dark:text-neutral-900 font-sans text-sm font-semibold tracking-wide transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:ring-offset-2 dark:focus:ring-offset-ink disabled:opacity-50 disabled:cursor-not-allowed">
                     <span x-text="isBuying ? 'Redirecting…' : 'Buy Now'"></span>
                 </button>
                 @else
@@ -907,6 +967,7 @@ function productDetail() {
     var _minQty        = (typeof d.minQty  === 'number' && d.minQty  >= 1) ? d.minQty  : 1;
     var _qtyStep       = (typeof d.qtyStep === 'number' && d.qtyStep >= 1) ? d.qtyStep : 1;
     var _stockQty      = (typeof d.stockQty  === 'number') ? d.stockQty  : 0;
+    var _isGiftCard    = d.isGiftCard || false;
 
     // If product has variants, use the first variant's stock instead of total
     if (_variants.length > 0 && typeof _variants[0].stock === 'number') {
@@ -922,7 +983,7 @@ function productDetail() {
 
     // ── Safe qty init ─────────────────────────────────────────────────────
     var _safeQty;
-    if (_stockQty <= 0) {
+    if (_stockQty <= 0 && !_isGiftCard) {
         _safeQty = 0;
     } else {
         _safeQty = _minQty;
@@ -970,6 +1031,9 @@ function productDetail() {
         variantAdjustment: _variantAdj,
         isAdding:       false,
         isBuying:       false,
+        isGiftCard:     d.isGiftCard || false,
+        allowCustomAmount: d.allowCustomAmount || false,
+        customAmount:   d.basePrice || 0,
         weight:         typeof d.weight === 'number' ? d.weight : null,
         weightUnit:     d.weightUnit || 'kg',
 
@@ -993,6 +1057,9 @@ function productDetail() {
 
         // grandTotal includes variant price adjustment
         get grandTotal() {
+            if (this.isGiftCard) {
+                return this.allowCustomAmount ? this.customAmount : this.basePrice;
+            }
             return (this.basePrice + this.variantAdjustment) * this.qty;
         },
 
@@ -1108,14 +1175,14 @@ function productDetail() {
         // ── cart actions ──────────────────────────────────────────────────
         addToCart: function() {
             if (this.isAdding) return;
-            if (this.stockQty <= 0) return;
-            if (!this.validateQty()) return;
+            if (!this.isGiftCard && this.stockQty <= 0) return;
+            if (!this.isGiftCard && !this.validateQty()) return;
 
             this.isAdding = true;
             var self = this;
             var d = window.__pdp || {};
             var v = this.variants[this.activeVariant] || null;
-            var unitPrice = this.basePrice + this.variantAdjustment;
+            var unitPrice = (this.isGiftCard && this.allowCustomAmount) ? this.customAmount : this.basePrice + this.variantAdjustment;
 
             // Add main product
             Alpine.store('cart').addItem({
@@ -1130,8 +1197,10 @@ function productDetail() {
                 min_quantity:    d.minQty,
                 quantity_step:   d.qtyStep,
                 loom_size:       d.loomSize,
-                quantity:        this.qty,
+                quantity:        this.isGiftCard ? 1 : this.qty,
                 unit_price:      unitPrice,
+                is_gift_card:    this.isGiftCard,
+                custom_price:    (this.isGiftCard && this.allowCustomAmount) ? this.customAmount : null,
                 selected_variant: v ? { id: v.id, color: v.color, hex: v.hex } : null,
                 image:           this.selectedImage,
                 stock_quantity:  this.stockQty,
@@ -1183,8 +1252,8 @@ function productDetail() {
         },
         buyNow: function() {
             if (this.isBuying) return;
-            if (this.stockQty <= 0) return;
-            if (!this.validateQty()) return;
+            if (!this.isGiftCard && this.stockQty <= 0) return;
+            if (!this.isGiftCard && !this.validateQty()) return;
 
             this.isBuying = true;
             this.addToCart();

@@ -32,6 +32,9 @@
         activeVariant: 0,
         activeImage:   null,
         qty:           1,
+        isGiftCard:        false,
+        allowCustomAmount: false,
+        customAmount:      0,
 
         open(p) {
             // Normalize selling method: DB stores per_length, JS checks per-length
@@ -40,6 +43,9 @@
             this.activeVariant = 0;
             this.qty           = p.minQuantity || 1;
             this.activeImage   = p.image || null;
+            this.isGiftCard        = p.isGiftCard || false;
+            this.allowCustomAmount = p.allowCustomAmount || false;
+            this.customAmount      = p.price || 0;
             this.isOpen        = true;
             document.body.style.overflow = 'hidden';
             // Set initial image from first variant if available
@@ -87,6 +93,7 @@
         },
         addToCart() {
             var v = this.currentVariant;
+            var unitPrice = (this.isGiftCard && this.allowCustomAmount) ? this.customAmount : (this.product.price || 0);
             Alpine.store('cart').addItem({
                 product_id:      this.product.id,
                 slug:            this.product.slug || '',
@@ -99,8 +106,10 @@
                 min_quantity:    this.product.minQuantity || 1,
                 quantity_step:   this.product.quantityStep || 1,
                 loom_size:       this.product.loomSize || null,
-                quantity:        this.qty,
-                unit_price:      this.product.price || 0,
+                quantity:        this.isGiftCard ? 1 : this.qty,
+                unit_price:      unitPrice,
+                is_gift_card:    this.isGiftCard,
+                custom_price:    (this.isGiftCard && this.allowCustomAmount) ? this.customAmount : null,
                 selected_variant: v ? { id: v.id, color: v.color, hex: v.hex } : null,
                 image:           this.activeImage || this.product.image || '',
                 stock_quantity:  this.currentStock,
@@ -214,18 +223,23 @@
 
                     {{-- Stock badge --}}
                     <div class="flex items-center justify-between gap-3 flex-wrap">
-                        <template x-if="currentStock > 10">
+                        <template x-if="isGiftCard">
+                            <span class="inline-flex items-center gap-1.5 font-sans text-2xs font-semibold tracking-wide uppercase px-2.5 py-1 bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-300 border border-brand-200 dark:border-brand-500/20">
+                                <span class="w-1.5 h-1.5 rounded-full bg-brand flex-shrink-0"></span>Available
+                            </span>
+                        </template>
+                        <template x-if="!isGiftCard && currentStock > 10">
                             <span class="inline-flex items-center gap-1.5 font-sans text-2xs font-semibold tracking-wide uppercase px-2.5 py-1 bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-300 border border-brand-200 dark:border-brand-500/20">
                                 <span class="w-1.5 h-1.5 rounded-full bg-brand flex-shrink-0"></span>In Stock
                             </span>
                         </template>
-                        <template x-if="currentStock > 0 && currentStock <= 10">
+                        <template x-if="!isGiftCard && currentStock > 0 && currentStock <= 10">
                             <span class="inline-flex items-center gap-1.5 font-sans text-2xs font-semibold tracking-wide uppercase px-2.5 py-1 bg-accent-50 dark:bg-accent-500/10 text-accent-600 dark:text-accent-300 border border-accent-200 dark:border-accent-500/20">
                                 <span class="w-1.5 h-1.5 rounded-full bg-accent-400 animate-pulse flex-shrink-0"></span>
                                 Only <span x-text="currentStock" class="mx-0.5"></span> left
                             </span>
                         </template>
-                        <template x-if="currentStock === 0">
+                        <template x-if="!isGiftCard && currentStock === 0">
                             <span class="inline-flex items-center gap-1.5 font-sans text-2xs font-semibold tracking-wide uppercase px-2.5 py-1 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20">
                                 <span class="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0"></span>Out of Stock
                             </span>
@@ -271,7 +285,7 @@
                                 <p class="font-sans text-xs font-medium text-neutral-700 dark:text-neutral-300" x-text="product.category || '—'"></p>
                             </div>
                         </div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2" x-show="!isGiftCard">
                             <svg viewBox="0 0 24 24" fill="none" class="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500 flex-shrink-0"><rect x="2" y="7" width="20" height="14" rx="1" stroke="currentColor" stroke-width="1.5"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" stroke="currentColor" stroke-width="1.5"/></svg>
                             <div>
                                 <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 uppercase tracking-wider leading-none mb-0.5">Sold As</p>
@@ -279,7 +293,7 @@
                                    x-text="(product.sellingMethod || 'unit').replace(/-/g,' ')"></p>
                             </div>
                         </div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2" x-show="!isGiftCard">
                             <svg viewBox="0 0 24 24" fill="none" class="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500 flex-shrink-0"><path d="M21 10H3M16 2v4M8 2v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/></svg>
                             <div>
                                 <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 uppercase tracking-wider leading-none mb-0.5">Unit</p>
@@ -299,13 +313,31 @@
                                    })()"></p>
                             </div>
                         </div>
+                        <template x-if="isGiftCard">
+                            <div class="flex items-center gap-2">
+                                <svg viewBox="0 0 24 24" fill="none" class="w-3.5 h-3.5 text-brand flex-shrink-0"><rect x="2" y="7" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M16 7V5a2 2 0 0 0-4 0v2M8 7V5a2 2 0 0 1 4 0v2" stroke="currentColor" stroke-width="1.5"/></svg>
+                                <div>
+                                    <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 uppercase tracking-wider leading-none mb-0.5">Type</p>
+                                    <p class="font-sans text-xs font-medium text-brand">Digital Gift Card</p>
+                                </div>
+                            </div>
+                        </template>
+                        <template x-if="isGiftCard">
+                            <div class="flex items-center gap-2">
+                                <svg viewBox="0 0 24 24" fill="none" class="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500 flex-shrink-0"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" stroke-width="1.5"/><polyline points="22,6 12,13 2,6" stroke="currentColor" stroke-width="1.5"/></svg>
+                                <div>
+                                    <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 uppercase tracking-wider leading-none mb-0.5">Delivery</p>
+                                    <p class="font-sans text-xs font-medium text-neutral-700 dark:text-neutral-300">Email · No shipping</p>
+                                </div>
+                            </div>
+                        </template>
                         <div class="flex items-center gap-2">
                             <svg viewBox="0 0 24 24" fill="none" class="w-3.5 h-3.5 text-brand flex-shrink-0"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
                             <div>
                                 <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 uppercase tracking-wider leading-none mb-0.5">Availability</p>
                                 <p class="font-sans text-xs font-medium"
-                                   :class="currentStock === 0 ? 'text-red-500' : currentStock <= 10 ? 'text-accent-600 dark:text-accent-400' : 'text-brand'"
-                                   x-text="currentStock === 0 ? 'Unavailable' : currentStock <= 10 ? currentStock + ' remaining' : 'Available'">
+                                   :class="(!isGiftCard && currentStock === 0) ? 'text-red-500' : (!isGiftCard && currentStock <= 10) ? 'text-accent-600 dark:text-accent-400' : 'text-brand'"
+                                   x-text="isGiftCard ? 'Available' : currentStock === 0 ? 'Unavailable' : currentStock <= 10 ? currentStock + ' remaining' : 'Available'">
                                 </p>
                             </div>
                         </div>
@@ -371,8 +403,8 @@
                         </a>
                     </div>
 
-                    {{-- ── QUANTITY ──────────────────────────────────────── --}}
-                    <div x-show="currentStock > 0" class="space-y-3">
+                    {{-- ── QUANTITY (physical products only) ───────────── --}}
+                    <div x-show="currentStock > 0 && !isGiftCard" class="space-y-3">
                         <div class="flex items-center gap-4">
                             <span class="font-sans text-xs font-semibold tracking-wider uppercase text-neutral-500 dark:text-neutral-400 w-20 flex-shrink-0">Quantity</span>
                             <div class="flex items-center border border-neutral-200 dark:border-neutral-700">
@@ -478,9 +510,44 @@
                         </div>
                     </div>
 
+                    {{-- ── GIFT CARD DENOMINATION ───────────────────────── --}}
+                    <div x-show="isGiftCard" class="space-y-3">
+                        <template x-if="allowCustomAmount">
+                            <div>
+                                <label class="font-sans text-xs font-semibold tracking-wider uppercase text-neutral-500 dark:text-neutral-400 block mb-2">Gift Card Amount</label>
+                                <div class="flex items-center border border-neutral-200 dark:border-neutral-700 overflow-hidden">
+                                    <span class="px-3 py-2.5 bg-neutral-50 dark:bg-neutral-800 font-sans text-sm font-semibold text-neutral-600 dark:text-neutral-400 border-r border-neutral-200 dark:border-neutral-700 select-none">₦</span>
+                                    <input type="number" x-model.number="customAmount" :min="product.price" step="100"
+                                           class="flex-1 px-3 py-2.5 font-sans text-sm font-semibold text-neutral-900 dark:text-white bg-white dark:bg-transparent focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand"
+                                           @change="customAmount = Math.max(product.price || 0, Number(customAmount) || 0)" />
+                                </div>
+                                <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 mt-1">Minimum: <span x-text="$store.currency ? $store.currency.format(product.price || 0) : '₦' + (product.price || 0).toLocaleString()"></span></p>
+                            </div>
+                        </template>
+                        <template x-if="!allowCustomAmount">
+                            <div class="flex items-center gap-4">
+                                <span class="font-sans text-xs font-semibold tracking-wider uppercase text-neutral-500 dark:text-neutral-400 w-20 flex-shrink-0">Amount</span>
+                                <span class="font-sans text-sm font-semibold text-neutral-900 dark:text-white"
+                                      x-text="$store.currency ? $store.currency.format(product.price || 0) : '₦' + (product.price || 0).toLocaleString()"></span>
+                                <span class="font-sans text-2xs text-brand bg-brand/10 px-2 py-0.5">Fixed</span>
+                            </div>
+                        </template>
+                        {{-- Gift card value summary --}}
+                        <div class="bg-brand-50 dark:bg-brand-900/20 border border-brand-100 dark:border-brand-800/40 px-4 py-3">
+                            <div class="flex items-center justify-between gap-3">
+                                <div>
+                                    <p class="font-sans text-xs text-brand-700 dark:text-brand-300 font-medium">Gift Card Value</p>
+                                    <p class="font-sans text-2xs text-brand-500 dark:text-brand-400">Digital · Delivered by email</p>
+                                </div>
+                                <p class="font-display text-lg font-bold text-brand-700 dark:text-brand-200"
+                                   x-text="$store.currency ? $store.currency.format(allowCustomAmount ? customAmount : (product.price || 0)) : '₦' + (allowCustomAmount ? customAmount : (product.price || 0)).toLocaleString()"></p>
+                            </div>
+                        </div>
+                    </div>
+
                     {{-- ── CTA BUTTONS ──────────────────────────────────── --}}
                     <div class="flex flex-row gap-3">
-                        <template x-if="currentStock > 0">
+                        <template x-if="currentStock > 0 || isGiftCard">
                             <div class="flex flex-row gap-3 w-full">
                                 <button
                                     @click="addToCart(); close()"
@@ -497,7 +564,7 @@
                                 </a>
                             </div>
                         </template>
-                        <template x-if="currentStock === 0">
+                        <template x-if="currentStock === 0 && !isGiftCard">
                             <div class="flex flex-row gap-3 w-full">
                                 <button disabled class="flex-1 inline-flex items-center justify-center px-4 py-3.5 bg-neutral-200 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 font-sans text-sm font-semibold tracking-wide cursor-not-allowed">
                                     Out of Stock

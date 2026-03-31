@@ -45,9 +45,10 @@ class OrderService
 
         $shippingCost = (float) ($shipping['price'] ?? 0);
         $referralDiscount = (float) ($payload['referralDiscountAmount'] ?? 0);
-        $pointsDiscount   = (float) ($payload['pointsDiscountAmount'] ?? 0);
+        $pointsDiscount = (float) ($payload['pointsDiscountAmount'] ?? 0);
+        $giftCardDiscount = (float) ($payload['giftCardDiscountAmount'] ?? 0);
 
-        $total = max(0, $subtotalNGN - $discountAmount - $referralDiscount - $pointsDiscount + $shippingCost);
+        $total = max(0, $subtotalNGN - $discountAmount - $referralDiscount - $pointsDiscount - $giftCardDiscount + $shippingCost);
 
         $order = Order::create([
             'order_number' => Order::generateOrderNumber(),
@@ -60,15 +61,15 @@ class OrderService
 
             // Address snapshot
             'shipping_street' => trim(($address['street'] ?? '').(! empty($address['houseNo']) ? ', '.$address['houseNo'] : '')),
-            'shipping_city' => $address['city'],
-            'shipping_state' => $address['state'],
-            'shipping_country' => $address['country'],
+            'shipping_city' => $address['city'] ?? null,
+            'shipping_state' => $address['state'] ?? null,
+            'shipping_country' => $address['country'] ?? null,
             'shipping_postal' => $address['postal'] ?? null,
             'shipping_notes' => $address['notes'] ?? null,
 
             // Shipping
-            'shipping_method_id' => $shipping['id'],
-            'shipping_carrier' => $this->resolveCarrierName($shipping['id']),
+            'shipping_method_id' => $shipping['id'] ?? null,
+            'shipping_carrier' => isset($shipping['id']) ? $this->resolveCarrierName($shipping['id']) : null,
             'shipping_method_name' => $shipping['name'] ?? null,
             'shipping_cost' => (int) round($shippingCost),
             'shipping_estimated_days' => $shipping['estimated_days'] ?? null,
@@ -87,10 +88,12 @@ class OrderService
 
             'status' => 'pending',
 
-            'referral_code'             => $payload['referralCode'] ?? null,
-            'referral_discount_amount'  => $payload['referralDiscountAmount'] ?? 0,
-            'points_redeemed'           => $payload['pointsRedeemed'] ?? 0,
-            'points_discount_amount'    => $payload['pointsDiscountAmount'] ?? 0,
+            'referral_code' => $payload['referralCode'] ?? null,
+            'referral_discount_amount' => $payload['referralDiscountAmount'] ?? 0,
+            'points_redeemed' => $payload['pointsRedeemed'] ?? 0,
+            'points_discount_amount' => $payload['pointsDiscountAmount'] ?? 0,
+            'gift_card_code' => isset($payload['giftCardCode']) ? strtoupper($payload['giftCardCode']) : null,
+            'gift_card_discount_amount' => $payload['giftCardDiscountAmount'] ?? 0,
         ]);
 
         // Create order items from cart
@@ -102,6 +105,11 @@ class OrderService
             }
             $variant = $cartItem->variant;
             $unitPrice = $product->final_price + ($variant?->price_adjustment ?? 0);
+
+            // Gift cards with custom amount use the stored custom_price
+            if ($product->is_gift_card && $cartItem->custom_price) {
+                $unitPrice = $cartItem->custom_price;
+            }
 
             $order->items()->create([
                 'product_id' => $product->id,

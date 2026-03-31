@@ -212,36 +212,30 @@
                 'heading' => 'Ready-to-Wear Fabric Materials You\'ll Love',
                 'body'    => 'Quality lace and African fabrics available in Ikeja for designers and ready-to-wear brands. Find materials that work well for everyday fashion and special outfits.',
                 'cta'     => 'Shop Now',
-                'cta_url' => '/shop',
+                'cta_url' => route('shop.index'),
                 'align'   => 'left',
                 'image'   => asset('images/hero1.jpg'),
-                'gradient' => 'linear-gradient(135deg, rgba(26, 10, 0, 0.4) 0%, rgba(61, 26, 0, 0.4) 40%, rgba(107, 47, 0, 0.4) 70%, rgba(45, 26, 0, 0.4) 100%)',
-                'overlay' => 'from-black/70 via-black/40 to-transparent',
-                'accent'  => '#d97706', /* amber */
+                'btn'     => 'bg-brand-500 hover:bg-brand-600',
             ],
             [
                 'tag'     => 'h2',
                 'heading' => 'Materials for Modern Men\'s Styles',
                 'body'    => 'From senator wear to agbada and casual outfits, explore fabrics that work perfectly for men\'s ready-to-wear collections.',
-                'cta'     => 'Men\'s Collection',
-                'cta_url' => '/collection/mens',
+                'cta'     => 'Explore the Shop',
+                'cta_url' => route('shop.index'),
                 'align'   => 'center',
                 'image'   => asset('images/hero2.jpg'),
-                'gradient' => 'linear-gradient(135deg, rgba(10, 10, 26, 0.4) 0%, rgba(26, 26, 61, 0.4) 40%, rgba(47, 47, 107, 0.4) 70%, rgba(26, 26, 61, 0.4) 100%)',
-                'overlay' => 'from-black/75 via-black/40 to-black/20',
-                'accent'  => '#6366f1', /* indigo */
+                'btn'     => 'bg-accent hover:bg-accent-600',
             ],
             [
                 'tag'     => 'h2',
                 'heading' => 'Fabrics for Elegant Women\'s Fashion',
                 'body'    => 'Discover lace and other African materials suitable for dresses, aso-ebi styles, and ready-to-wear women\'s outfits.',
-                'cta'     => 'Women\'s Collection',
-                'cta_url' => '/collection/womens',
+                'cta'     => 'Browse Collections',
+                'cta_url' => route('shop.index'),
                 'align'   => 'right',
                 'image'   => asset('images/hero3.jpg'),
-                'gradient' => 'linear-gradient(135deg, rgba(26, 0, 26, 0.4) 0%, rgba(61, 0, 61, 0.4) 40%, rgba(107, 0, 80, 0.4) 70%, rgba(45, 0, 26, 0.4) 100%)',
-                'overlay' => 'from-black/70 via-black/35 to-transparent',
-                'accent'  => '#ec4899', /* pink */
+                'btn'     => 'bg-brand-500 hover:bg-brand-600',
             ],
         ];
         @endphp
@@ -260,17 +254,14 @@
             class="absolute inset-0 z-0"
             style="display:none"
         >
-            {{-- Background image / gradient --}}
+            {{-- Background image --}}
             <div
                 class="hero-bg absolute inset-0 bg-cover bg-center"
-                style="background-image: url('{{ $slide['image'] }}'), {{ $slide['gradient'] }}; background-size: cover; background-position: center;"
+                style="background-image: url('{{ $slide['image'] }}');"
             ></div>
 
-            {{-- Gradient overlay --}}
-            <div class="absolute inset-0 bg-gradient-to-r {{ $slide['overlay'] }} z-10"></div>
-
-            {{-- Decorative bottom fade --}}
-            <div class="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-black/50 to-transparent z-10"></div>
+            {{-- Black overlay --}}
+            <div class="absolute inset-0 bg-black/60 z-10"></div>
 
             {{-- ── SLIDE CONTENT ─────────────────────────────── --}}
             <div class="relative z-20 flex items-center h-full">
@@ -283,8 +274,7 @@
                         {{-- Eyebrow label --}}
                         <div class="inline-flex items-center gap-2 mb-5 px-3 py-1.5 rounded-full
                                     bg-white/10 backdrop-blur-sm border border-white/20">
-                            <span class="w-1.5 h-1.5 rounded-full animate-pulse"
-                                  style="background-color: {{ $slide['accent'] }}"></span>
+                            <span class="w-1.5 h-1.5 rounded-full animate-pulse {{ $i === 1 ? 'bg-accent' : 'bg-brand-300' }}"></span>
                             <span class="font-sans text-xs font-semibold tracking-widest uppercase text-white/80">
                                 {{ $i === 0 ? 'Premium Collection' : ($i === 1 ? 'Men\'s Fashion' : 'Women\'s Fashion') }}
                             </span>
@@ -308,8 +298,7 @@
                             <a href="{{ $slide['cta_url'] }}"
                                class="group inline-flex items-center gap-3 px-5 py-2.5 rounded-none font-sans text-sm font-semibold
                                       text-white transition-all duration-300
-                                      hover:gap-4"
-                               style="background-color: {{ $slide['accent'] }};"
+                                      hover:gap-4 {{ $slide['btn'] }}"
                             >
                                 {{ $slide['cta'] }}
                                 {{-- Arrow icon --}}
@@ -523,7 +512,7 @@
                             View Collections
                             <svg class="wcu-arr w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                         </a>
-                        <a href="/about"
+                        <a href="{{ route('about') }}"
                            class="wcu-btn inline-flex items-center gap-3 px-7 py-3.5
                                   font-sans text-sm font-semibold text-ink dark:text-white
                                   border border-neutral-300 dark:border-white/20

@@ -146,7 +146,7 @@
                 Senator wear, agbada and lace fabrics crafted for the modern Nigerian man.
             </p>
             <a
-                href="{{ url('/collection/mens') }}"
+                href="{{ route('shop.index') }}"
                 class="shop-link font-sans text-sm font-medium text-white tracking-wide"
                 aria-label="Shop the Classic Men material collection"
             >
@@ -179,7 +179,7 @@
                 Lace, aso-ebi and ready-to-wear fabrics for dresses, occasions and everyday elegance.
             </p>
             <a
-                href="{{ url('/collection/womens') }}"
+                href="{{ route('shop.index') }}"
                 class="shop-link font-sans text-sm font-medium text-white tracking-wide"
                 aria-label="Shop the Women Modern Material collection"
             >

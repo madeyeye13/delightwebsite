@@ -120,21 +120,24 @@ document.addEventListener('alpine:init', () => {
         },
 
         // ── ADD MAIN ITEM ─────────────────────────────────────────────────────
-        // Adds a product to the cart. If it already exists (same product_id + variant), bumps qty.
+        // Adds a product to the cart. Gift cards never merge — each is its own line/code.
         addItem: function(itemData) {
             var variantId = itemData.selected_variant ? itemData.selected_variant.id : null;
-            var existing = this.items.find(function(i) {
-                var existingVid = i.selected_variant ? i.selected_variant.id : null;
-                return i.product_id === itemData.product_id && existingVid === variantId;
-            });
-            if (existing) {
-                existing.quantity += (itemData.quantity || itemData.min_quantity || 1);
-                if (existing.stock_quantity && existing.quantity > existing.stock_quantity) {
-                    existing.quantity = existing.stock_quantity;
+            // Only merge non-gift-card items
+            if (!itemData.is_gift_card) {
+                var existing = this.items.find(function(i) {
+                    var existingVid = i.selected_variant ? i.selected_variant.id : null;
+                    return i.product_id === itemData.product_id && existingVid === variantId;
+                });
+                if (existing) {
+                    existing.quantity += (itemData.quantity || itemData.min_quantity || 1);
+                    if (existing.stock_quantity && existing.quantity > existing.stock_quantity) {
+                        existing.quantity = existing.stock_quantity;
+                    }
+                    this.open = true;
+                    Livewire.dispatch('cart:update-qty', { productId: itemData.product_id, variantId: variantId, quantity: existing.quantity });
+                    return;
                 }
-                this.open = true;
-                Livewire.dispatch('cart:update-qty', { productId: itemData.product_id, variantId: variantId, quantity: existing.quantity });
-                return;
             }
             var newItem = Object.assign({
                 cart_line_id: null,
@@ -143,18 +146,25 @@ document.addEventListener('alpine:init', () => {
                 total_price: 0,
                 suggested_add_ons: [],
                 added_add_ons: [],
-                quantity: itemData.min_quantity || 1,
+                quantity: itemData.is_gift_card ? 1 : (itemData.min_quantity || 1),
             }, itemData);
             newItem.total_price = (newItem.unit_price || 0) * newItem.quantity;
             this.items.push(newItem);
             this.open = true;
-            Livewire.dispatch('cart:add', { productId: itemData.product_id, variantId: variantId, quantity: newItem.quantity });
+            Livewire.dispatch('cart:add', { productId: itemData.product_id, variantId: variantId, quantity: newItem.quantity, customPrice: newItem.custom_price || null });
         },
 
         // ── MAIN ITEM QUANTITY ────────────────────────────────────────────────
         increaseQty: function(index) {
             var item = this.items[index];
             if (!item) return;
+            if (item.is_gift_card) {
+                // Each [+] on a gift card adds a new separate line (one new code at same denomination)
+                var newItem = Object.assign({}, item, { cart_line_id: null, quantity: 1 });
+                this.items.push(newItem);
+                Livewire.dispatch('cart:add', { productId: item.product_id, variantId: null, quantity: 1, customPrice: item.custom_price || item.unit_price || null });
+                return;
+            }
             var step = item.quantity_step || 1;
             if (item.stock_quantity && item.quantity + step > item.stock_quantity) return;
             item.quantity = item.quantity + step;
@@ -164,6 +174,16 @@ document.addEventListener('alpine:init', () => {
         decreaseQty: function(index) {
             var item = this.items[index];
             if (!item) return;
+            if (item.is_gift_card) {
+                // [-] removes this specific gift card line
+                if (item.cart_line_id) {
+                    Livewire.dispatch('cart:remove-line', { cartLineId: item.cart_line_id });
+                } else {
+                    Livewire.dispatch('cart:remove', { productId: item.product_id, variantId: null });
+                }
+                this.items.splice(index, 1);
+                return;
+            }
             var prev = item.quantity - (item.quantity_step || 1);
             if (prev >= (item.min_quantity || 1)) {
                 item.quantity = prev;
@@ -175,9 +195,34 @@ document.addEventListener('alpine:init', () => {
         removeItem: function(index) {
             var item = this.items[index];
             if (item) {
-                Livewire.dispatch('cart:remove', { productId: item.product_id, variantId: item.selected_variant?.id ?? null });
+                if (item.is_gift_card && item.cart_line_id) {
+                    Livewire.dispatch('cart:remove-line', { cartLineId: item.cart_line_id });
+                } else {
+                    Livewire.dispatch('cart:remove', { productId: item.product_id, variantId: item.selected_variant?.id ?? null });
+                }
             }
             this.items.splice(index, 1);
+        },
+
+        // ── REMOVE A SPECIFIC LINE BY ID (for gift cards with multiple same-product lines) ──
+        removeItemByLine: function(cartLineId) {
+            var index = this.items.findIndex(function(i) { return i.cart_line_id === cartLineId; });
+            if (index !== -1) {
+                this.items.splice(index, 1);
+            }
+            Livewire.dispatch('cart:remove-line', { cartLineId: cartLineId });
+        },
+
+        // ── UPDATE GIFT CARD DENOMINATION ─────────────────────────────────────
+        updateGiftCardPrice: function(cartLineId, rawValue) {
+            var amount = parseInt(rawValue, 10) || 0;
+            if (amount <= 0) return;
+            var item = this.items.find(function(i) { return i.cart_line_id === cartLineId; });
+            if (item) {
+                item.custom_price = amount;
+                item.unit_price = amount;
+            }
+            Livewire.dispatch('cart:update-gift-card-price', { cartLineId: cartLineId, price: amount });
         },
 
         // ── ADD-ON: ADD from suggestions ──────────────────────────────────────
@@ -433,9 +478,29 @@ document.addEventListener('alpine:init', () => {
                             </button>
                         </div>
 
-                        {{-- Selling method summary --}}
-                        <div class="bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-100 dark:border-neutral-800 px-3 py-2">
-                            <template x-if="item.selling_method === 'per-length'">
+                        {{-- Gift card: custom denomination input --}}
+                        <template x-if="item.is_gift_card">
+                            <div class="bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-100 dark:border-neutral-800 px-3 py-2">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="font-sans text-2xs text-neutral-500 dark:text-neutral-400">
+                                        <svg class="w-3 h-3 inline-block mr-1 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                                        Digital · 1 gift code · Set amount:
+                                    </span>
+                                    <div class="flex items-center border border-neutral-200 dark:border-neutral-600">
+                                        <span class="px-1.5 font-sans text-2xs text-neutral-400 dark:text-neutral-500 bg-neutral-100 dark:bg-neutral-700 border-r border-neutral-200 dark:border-neutral-600 select-none">₦</span>
+                                        <input type="number"
+                                            :value="item.custom_price || item.unit_price"
+                                            @change="$store.cart.updateGiftCardPrice(item.cart_line_id, $event.target.value)"
+                                            class="w-24 py-0.5 px-1.5 font-sans text-xs font-semibold text-neutral-900 dark:text-white bg-transparent outline-none"
+                                            min="1" step="1000">
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+
+                        {{-- Selling method summary (non-gift-card items only) --}}
+                        <div x-show="!item.is_gift_card" class="bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-100 dark:border-neutral-800 px-3 py-2">
+                            <template x-if="!item.is_gift_card && item.selling_method === 'per-length'">
                                 <div class="space-y-1.5">
                                     <div class="flex items-center justify-between">
                                         <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">Sold As</span>
@@ -455,25 +520,25 @@ document.addEventListener('alpine:init', () => {
                                     </div>
                                 </div>
                             </template>
-                            <template x-if="item.selling_method === 'per-set'">
+                            <template x-if="!item.is_gift_card && item.selling_method === 'per-set'">
                                 <div class="flex items-center gap-4 flex-wrap">
                                     <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">Sold As: <span class="font-medium text-neutral-600 dark:text-neutral-300">Per Set</span></span>
                                     <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">Qty: <span class="font-medium text-neutral-600 dark:text-neutral-300" x-text="item.quantity + (item.quantity === 1 ? ' Set' : ' Sets')"></span></span>
                                 </div>
                             </template>
-                            <template x-if="item.selling_method === 'per-bundle'">
+                            <template x-if="!item.is_gift_card && item.selling_method === 'per-bundle'">
                                 <div class="flex items-center gap-4 flex-wrap">
                                     <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">Sold per <span class="font-medium text-neutral-600 dark:text-neutral-300" x-text="item.unit_label || 'Bundle'"></span></span>
                                     <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">Qty: <span class="font-medium text-neutral-600 dark:text-neutral-300" x-text="item.quantity"></span></span>
                                 </div>
                             </template>
-                            <template x-if="item.selling_method === 'per-piece'">
+                            <template x-if="!item.is_gift_card && item.selling_method === 'per-piece'">
                                 <div class="flex items-center gap-4 flex-wrap">
                                     <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">Sold per <span class="font-medium text-neutral-600 dark:text-neutral-300" x-text="item.unit_label || 'Piece'"></span></span>
                                     <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">Qty: <span class="font-medium text-neutral-600 dark:text-neutral-300" x-text="item.quantity"></span></span>
                                 </div>
                             </template>
-                            <template x-if="item.selling_method === 'per-loom'">
+                            <template x-if="!item.is_gift_card && item.selling_method === 'per-loom'">
                                 <div class="flex items-center gap-4 flex-wrap">
                                     <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">Sold per <span class="font-medium text-neutral-600 dark:text-neutral-300" x-text="item.unit_label || 'Loom'"></span></span>
                                     <template x-if="item.loom_size"><span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">Size: <span class="font-medium text-neutral-600 dark:text-neutral-300" x-text="item.loom_size"></span></span></template>
@@ -482,25 +547,28 @@ document.addEventListener('alpine:init', () => {
                             </template>
                         </div>
 
-                        {{-- Quantity controls --}}
+                        {{-- Quantity controls: for gift cards shows [−] 1 code [+]; [-] removes this line, [+] adds new card --}}
                         <div class="flex items-center justify-between">
                             <div class="flex items-center border border-neutral-200 dark:border-neutral-700">
-                                <button @click="$store.cart.decreaseQty(index)" :disabled="item.quantity <= item.min_quantity"
+                                <button @click="$store.cart.decreaseQty(index)" :disabled="!item.is_gift_card && item.quantity <= item.min_quantity"
                                         class="w-8 h-8 flex items-center justify-center text-neutral-500 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
                                     <svg viewBox="0 0 24 24" fill="none" class="w-3 h-3"><path d="M5 12h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
                                 </button>
                                 <span x-text="item.quantity" class="w-10 text-center font-sans text-xs font-semibold text-neutral-900 dark:text-white select-none"></span>
                                 <button @click="$store.cart.increaseQty(index)"
-                                        :disabled="item.stock_quantity && item.quantity >= item.stock_quantity"
+                                        :disabled="!item.is_gift_card && item.stock_quantity && item.quantity >= item.stock_quantity"
                                         class="w-8 h-8 flex items-center justify-center text-neutral-500 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
                                     <svg viewBox="0 0 24 24" fill="none" class="w-3 h-3"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
                                 </button>
                             </div>
                             <span class="font-sans text-2xs text-neutral-400 dark:text-neutral-500">
-                                <template x-if="item.selling_method === 'per-length'">
+                                <template x-if="item.is_gift_card">
+                                    <span class="text-brand dark:text-brand-300 font-medium">1 gift code</span>
+                                </template>
+                                <template x-if="!item.is_gift_card && item.selling_method === 'per-length'">
                                     <span><span x-text="$store.currency.format(item.unit_price)"></span> per <span x-text="item.units_per_order + ' ' + item.length_unit"></span></span>
                                 </template>
-                                <template x-if="item.selling_method !== 'per-length'">
+                                <template x-if="!item.is_gift_card && item.selling_method !== 'per-length'">
                                     <span><span x-text="$store.currency.format(item.unit_price)"></span> / <span x-text="item.unit_label || (item.selling_method === 'per-set' ? 'Set' : 'unit')"></span></span>
                                 </template>
                             </span>

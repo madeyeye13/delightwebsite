@@ -27,11 +27,17 @@ class OrderConfirmation extends Mailable implements ShouldQueue
 
     public function content(): Content
     {
+        $order = $this->order->load('items.product');
+        $hasGiftCardProducts = $order->items->some(
+            fn ($item) => (bool) $item->product?->is_gift_card
+        );
+
         return new Content(
             markdown: 'emails.order-confirmation',
             with: [
-                'order' => $this->order->load('items'),
+                'order' => $order,
                 'shopUrl' => route('shop.index'),
+                'hasGiftCardProducts' => $hasGiftCardProducts,
             ],
         );
     }

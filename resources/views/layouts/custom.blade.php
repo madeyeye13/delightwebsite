@@ -7,7 +7,24 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>@yield('title', config('app.name', 'Laravel'))</title>
+        @php
+            $seoTitle       = \App\Models\AppSetting::get('seo_title', config('app.name'));
+            $seoDescription = \App\Models\AppSetting::get('seo_description');
+            $seoKeywords    = \App\Models\AppSetting::get('seo_keywords');
+            $seoNoindex     = (bool) \App\Models\AppSetting::get('seo_noindex', '0');
+        @endphp
+
+        <title>@yield('title', $seoTitle)</title>
+        @if($seoDescription)
+        <meta name="description" content="{{ $seoDescription }}">
+        <meta property="og:description" content="{{ $seoDescription }}">
+        @endif
+        @if($seoKeywords)
+        <meta name="keywords" content="{{ $seoKeywords }}">
+        @endif
+        <meta name="robots" content="{{ $seoNoindex ? 'noindex, nofollow' : 'index, follow' }}">
+        <meta property="og:title" content="@yield('title', $seoTitle)">
+        <meta property="og:site_name" content="{{ config('app.name') }}">
 
 
         <!-- Scripts -->

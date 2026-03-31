@@ -43,7 +43,7 @@ class GlobalSearch extends Component
                 'title' => $p->name,
                 'url' => route('products.show', $p->slug),
                 'image' => $p->thumb_image_url,
-                'price' => $p->final_price,
+                'price' => '₦'.number_format((int) $p->final_price),
                 'label' => $p->category?->name,
             ])
             ->all();

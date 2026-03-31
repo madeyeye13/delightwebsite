@@ -17,8 +17,15 @@ class GiftCardTransactionFactory extends Factory
      */
     public function definition(): array
     {
+        $before = fake()->numberBetween(5000, 50000);
+        $used = fake()->numberBetween(1000, $before);
+
         return [
-            //
+            'amount_used' => $used,
+            'balance_before' => $before,
+            'balance_after' => $before - $used,
+            'is_pos_redemption' => false,
+            'notes' => null,
         ];
     }
 }

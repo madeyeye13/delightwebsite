@@ -9,5 +9,5 @@ new class extends Component
 ?>
 
 <div>
-    {{-- He who is contented is rich. - Laozi --}}
+    {{-- When there is no desire, all things are at peace. - Laozi --}}
 </div>

@@ -23,7 +23,7 @@
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a1 1 0 011-1h6a1 1 0 011 1v2"/></svg>
             Delete Selected
         </button>
-        <button wire:click="$set('selectedIds', []); $set('selectAll', false)" class="text-xs text-red-500 dark:text-red-400 hover:underline">Clear</button>
+        <button wire:click="clearSelection" class="text-xs text-red-500 dark:text-red-400 hover:underline">Clear</button>
     </div>
     @endif
 

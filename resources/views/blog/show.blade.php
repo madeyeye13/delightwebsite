@@ -112,6 +112,29 @@
     }
     </script>
 
+    {{-- ── Alpine store init: theme (dark mode) ───────────────────────────────── --}}
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.store('theme', {
+            dark: localStorage.getItem('theme') === 'dark'
+                || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches),
+            toggle() {
+                this.dark = !this.dark;
+                localStorage.setItem('theme', this.dark ? 'dark' : 'light');
+            }
+        });
+    });
+    // Apply dark class immediately to avoid flash of unstyled content
+    (function() {
+        var saved = localStorage.getItem('theme');
+        if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    })();
+</script>
+
     <style>
         /* ── Rich post body prose styles ── */
         .post-prose { font-size: 15px; line-height: 1.65; color: #525252; }

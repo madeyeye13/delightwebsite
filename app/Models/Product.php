@@ -58,6 +58,8 @@ class Product extends Model implements HasMedia
         'featured',
         'is_new_arrival',
         'new_arrival_expiry',
+        'is_gift_card',
+        'allow_custom_amount',
     ];
 
     protected function casts(): array
@@ -79,6 +81,8 @@ class Product extends Model implements HasMedia
             'featured' => 'boolean',
             'is_new_arrival' => 'boolean',
             'new_arrival_expiry' => 'date',
+            'is_gift_card' => 'boolean',
+            'allow_custom_amount' => 'boolean',
         ];
     }
 
@@ -322,6 +326,8 @@ class Product extends Model implements HasMedia
             'weightUnit' => $this->weight_unit ?? 'kg',
             'metaTitle' => $this->meta_title ?? '',
             'metaDescription' => $this->meta_description ?? '',
+            'isGiftCard' => (bool) $this->is_gift_card,
+            'allowCustomAmount' => (bool) $this->allow_custom_amount,
         ];
     }
 }

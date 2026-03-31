@@ -56,6 +56,13 @@ class OrderIndex extends Component
 
     // ─── Pagination resets ────────────────────────────────────────────────────
 
+    public function mount(?int $highlightOrderId = null): void
+    {
+        if ($highlightOrderId) {
+            $this->viewing = Order::with(['items', 'user', 'dhlShipment'])->find($highlightOrderId);
+        }
+    }
+
     public function updatedSearch(): void
     {
         $this->resetPage();
@@ -81,7 +88,7 @@ class OrderIndex extends Component
             : [];
     }
 
-    private function clearSelection(): void
+    public function clearSelection(): void
     {
         $this->selectedIds = [];
         $this->selectAll = false;
@@ -110,9 +117,9 @@ class OrderIndex extends Component
 
         // Fire email only when genuinely transitioning into these statuses
         if ($status === 'shipped' && $previousStatus !== 'shipped') {
-            SendOrderShippedEmail::dispatch($order->fresh())->onQueue('emails');
+            SendOrderShippedEmail::dispatch($order->fresh());
         } elseif ($status === 'delivered' && $previousStatus !== 'delivered') {
-            SendOrderDeliveredEmail::dispatch($order->fresh())->onQueue('emails');
+            SendOrderDeliveredEmail::dispatch($order->fresh());
         }
 
         // Refresh open drawer
@@ -235,7 +242,7 @@ class OrderIndex extends Component
 
         // Mark order shipped + email
         $order->update(['status' => 'shipped']);
-        SendOrderShippedEmail::dispatch($order->fresh())->onQueue('emails');
+        SendOrderShippedEmail::dispatch($order->fresh());
 
         // Close modal, reset state
         $this->showShipmentModal = false;
@@ -304,7 +311,7 @@ class OrderIndex extends Component
 
         // Dispatch cancellation email if the job exists
         if (class_exists(SendOrderCancelledEmail::class)) {
-            SendOrderCancelledEmail::dispatch($order->fresh())->onQueue('emails');
+            SendOrderCancelledEmail::dispatch($order->fresh());
         }
 
         $this->showCancelModal = false;

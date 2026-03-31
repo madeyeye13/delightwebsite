@@ -46,6 +46,8 @@ class Order extends Model
         'referral_discount_amount',
         'points_redeemed',
         'points_discount_amount',
+        'gift_card_code',
+        'gift_card_discount_amount',
     ];
 
     protected function casts(): array
@@ -74,6 +76,11 @@ class Order extends Model
     public function dhlShipment(): HasOne
     {
         return $this->hasOne(DhlShipment::class);
+    }
+
+    public function giftCardTransactions(): HasMany
+    {
+        return $this->hasMany(GiftCardTransaction::class);
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────

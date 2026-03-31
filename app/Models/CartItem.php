@@ -12,12 +12,14 @@ class CartItem extends Model
         'product_id',
         'variant_id',
         'quantity',
+        'custom_price',
     ];
 
     protected function casts(): array
     {
         return [
             'quantity' => 'integer',
+            'custom_price' => 'integer',
         ];
     }
 

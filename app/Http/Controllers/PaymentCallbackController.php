@@ -3,13 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Http\RedirectResponse;
+use App\Services\FlutterwaveService;
+use App\Services\GiftCardService;
 use App\Services\OrderService;
 use App\Services\PaystackService;
-use App\Services\FlutterwaveService;
 use App\Services\ReferralService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class PaymentCallbackController extends Controller
 {
@@ -17,7 +18,8 @@ class PaymentCallbackController extends Controller
         private readonly OrderService $orderService,
         private readonly PaystackService $paystackService,
         private readonly FlutterwaveService $flutterwaveService,
-        private readonly ReferralService $referralService, // ✅ Injected once
+        private readonly ReferralService $referralService,
+        private readonly GiftCardService $giftCardService,
     ) {}
 
     public function paystack(Request $request): RedirectResponse
@@ -41,28 +43,34 @@ class PaymentCallbackController extends Controller
 
                 if ($order && $order->payment_status !== 'paid') {
 
-                    // ✅ Mark order as paid
+                    // Mark order as paid
                     $this->orderService->markOrderPaid($order, $reference);
 
-                    // ✅ Process referral + points (only once)
+                    // Process referral + points (only once)
                     if (! $order->referral_processed) {
                         $this->referralService->processReferralForOrder($order, $request);
                         $this->referralService->processPointsRedemption($order);
 
                         $order->update([
-                            'referral_processed' => true
+                            'referral_processed' => true,
                         ]);
                     }
+
+                    // Apply gift card redemption (if customer used one at checkout)
+                    $this->giftCardService->applyToOrder($order);
+
+                    // Issue gift card codes for any gift card products purchased
+                    $this->giftCardService->issueForOrder($order);
                 }
 
                 return redirect()->route('checkout.success', [
-                    'orderNumber' => $order?->order_number ?? $reference
+                    'orderNumber' => $order?->order_number ?? $reference,
                 ]);
             }
         } catch (\Throwable $e) {
             Log::error('Paystack callback error', [
                 'reference' => $reference,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
 
@@ -92,28 +100,34 @@ class PaymentCallbackController extends Controller
 
                 if ($order && $order->payment_status !== 'paid') {
 
-                    // ✅ Mark order as paid
+                    // Mark order as paid
                     $this->orderService->markOrderPaid($order, $txRef);
 
-                    // ✅ Process referral + points (only once)
+                    // Process referral + points (only once)
                     if (! $order->referral_processed) {
                         $this->referralService->processReferralForOrder($order, $request);
                         $this->referralService->processPointsRedemption($order);
 
                         $order->update([
-                            'referral_processed' => true
+                            'referral_processed' => true,
                         ]);
                     }
+
+                    // Apply gift card redemption (if customer used one at checkout)
+                    $this->giftCardService->applyToOrder($order);
+
+                    // Issue gift card codes for any gift card products purchased
+                    $this->giftCardService->issueForOrder($order);
                 }
 
                 return redirect()->route('checkout.success', [
-                    'orderNumber' => $order?->order_number ?? $txRef
+                    'orderNumber' => $order?->order_number ?? $txRef,
                 ]);
             }
         } catch (\Throwable $e) {
             Log::error('Flutterwave callback error', [
                 'tx_ref' => $txRef,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
 

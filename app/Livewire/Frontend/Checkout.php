@@ -5,15 +5,21 @@ namespace App\Livewire\Frontend;
 use App\Mail\AccountCreated;
 use App\Mail\AdminOrderNotification;
 use App\Mail\OrderConfirmation;
+use App\Models\AppSetting;
 use App\Models\Cart;
 use App\Models\DhlConfiguration;
 use App\Models\Order;
 use App\Models\ProductCoupon;
+use App\Models\Referral;
+use App\Models\RewardPoint;
+use App\Models\RewardSetting;
 use App\Models\User;
 use App\Services\CurrencyService;
 use App\Services\CustomShippingService;
 use App\Services\DHLService;
+use App\Services\GiftCardService;
 use App\Services\OrderService;
+use App\Services\ReferralService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -24,9 +30,13 @@ use Livewire\Component;
 class Checkout extends Component
 {
     public bool $isGuest = true;
+
     public string $sessionReferralCode = '';
+
     public int $userPointBalance = 0;
+
     public int $maxPointsPerOrder = 0;
+
     public int $nairaPerPoint = 0;
 
     public function mount(): void
@@ -43,28 +53,28 @@ class Checkout extends Component
 
         // Load reward point info for logged-in users
         if (Auth::check()) {
-            $this->userPointBalance = \App\Models\RewardPoint::balanceFor(Auth::id());
-            $this->maxPointsPerOrder = \App\Models\RewardSetting::maxPointsPerOrder();
-            $this->nairaPerPoint     = \App\Models\RewardSetting::nairaPerPoint();
+            $this->userPointBalance = RewardPoint::balanceFor(Auth::id());
+            $this->maxPointsPerOrder = RewardSetting::maxPointsPerOrder();
+            $this->nairaPerPoint = RewardSetting::nairaPerPoint();
         }
     }
 
     /**
- * Called from Alpine on page load to get referral/points info.
- * Returns what discounts are available to this checkout session.
- */
+     * Called from Alpine on page load to get referral/points info.
+     * Returns what discounts are available to this checkout session.
+     */
     public function getCheckoutDiscounts(): array
     {
         $referralDiscount = 0;
-        $referralCode     = $this->sessionReferralCode;
-        $userId           = Auth::id();
+        $referralCode = $this->sessionReferralCode;
+        $userId = Auth::id();
 
         if ($referralCode) {
-            $referral = \App\Models\Referral::where('code', $referralCode)->first();
+            $referral = Referral::where('code', $referralCode)->first();
 
             // Disallow using your own code
             if ($referral && $referral->user_id !== $userId) {
-                $percent          = \App\Models\RewardSetting::referralDiscountPercent();
+                $percent = RewardSetting::referralDiscountPercent();
                 $referralDiscount = $percent; // percent — Alpine calculates NGN amount
             } else {
                 // Invalid or own code — clear it
@@ -74,13 +84,13 @@ class Checkout extends Component
         }
 
         return [
-            'referralCode'          => $referralCode,
-            'referralDiscountPct'   => $referralDiscount,
-            'pointBalance'          => $this->userPointBalance,
-            'maxPointsPerOrder'     => $this->maxPointsPerOrder,
-            'nairaPerPoint'         => $this->nairaPerPoint,
+            'referralCode' => $referralCode,
+            'referralDiscountPct' => $referralDiscount,
+            'pointBalance' => $this->userPointBalance,
+            'maxPointsPerOrder' => $this->maxPointsPerOrder,
+            'nairaPerPoint' => $this->nairaPerPoint,
             // Max NGN the user can get from points
-            'maxPointsDiscountNgn'  => $this->maxPointsPerOrder * $this->nairaPerPoint,
+            'maxPointsDiscountNgn' => $this->maxPointsPerOrder * $this->nairaPerPoint,
         ];
     }
 
@@ -210,6 +220,21 @@ class Checkout extends Component
     }
 
     /**
+     * Validate a gift card code and return the available balance.
+     *
+     * @return array{valid: bool, message: string, balance?: int}
+     */
+    public function validateGiftCard(string $code): array
+    {
+        $code = strtoupper(trim($code));
+        if (empty($code)) {
+            return ['valid' => false, 'message' => 'Please enter a gift card code'];
+        }
+
+        return app(GiftCardService::class)->validate($code);
+    }
+
+    /**
      * Sync the header currency when the country dropdown changes.
      */
     public function syncCurrency(string $countryCode): void
@@ -237,12 +262,6 @@ class Checkout extends Component
         if (empty($contact['fullName']) || empty($contact['email']) || empty($contact['phone'])) {
             return ['success' => false, 'error' => 'Please fill in all required contact fields'];
         }
-        if (empty($address['street']) || empty($address['city']) || empty($address['country'])) {
-            return ['success' => false, 'error' => 'Please fill in your shipping address'];
-        }
-        if (empty($shippingMethod['id'])) {
-            return ['success' => false, 'error' => 'Please select a shipping method'];
-        }
         if (! in_array($paymentMethod, ['paystack', 'flutterwave'])) {
             return ['success' => false, 'error' => 'Please select a payment method'];
         }
@@ -250,6 +269,19 @@ class Checkout extends Component
         $cart = $this->resolveCart();
         if (! $cart || $cart->items()->count() === 0) {
             return ['success' => false, 'error' => 'Your cart is empty'];
+        }
+
+        $cart->load('items.product');
+        $hasOnlyGiftCards = $cart->items->isNotEmpty()
+            && $cart->items->every(fn ($item) => (bool) $item->product?->is_gift_card);
+
+        if (! $hasOnlyGiftCards) {
+            if (empty($address['street']) || empty($address['city']) || empty($address['country'])) {
+                return ['success' => false, 'error' => 'Please fill in your shipping address'];
+            }
+            if (empty($shippingMethod['id'])) {
+                return ['success' => false, 'error' => 'Please select a shipping method'];
+            }
         }
 
         /** @var OrderService $orderService */
@@ -272,37 +304,61 @@ class Checkout extends Component
             if (! $product) {
                 return 0;
             }
+            // For gift cards with a custom denomination, use the stored custom_price
+            if ($product->is_gift_card && $item->custom_price) {
+                return $item->custom_price * $item->quantity;
+            }
             $unitPrice = $product->final_price + ($item->variant?->price_adjustment ?? 0);
 
             return $unitPrice * $item->quantity;
         });
 
         // ── Referral discount ────────────────────────────────────────────
-$referralCode           = Session::get('referral_code', '');
-$referralDiscountAmount = 0;
+        $referralCode = Session::get('referral_code', '');
+        $referralDiscountAmount = 0;
 
-if ($referralCode) {
-    $referralDiscountAmount = app(\App\Services\ReferralService::class)
-        ->calculateDiscount($referralCode, $subtotal, $user->id);
-    // Inject into payload so OrderService stores it
-    $payload['referralCode']           = $referralCode;
-    $payload['referralDiscountAmount'] = $referralDiscountAmount;
-}
+        if ($referralCode) {
+            $referralDiscountAmount = app(ReferralService::class)
+                ->calculateDiscount($referralCode, $subtotal, $user->id);
+            // Inject into payload so OrderService stores it
+            $payload['referralCode'] = $referralCode;
+            $payload['referralDiscountAmount'] = $referralDiscountAmount;
+        }
 
-// ── Points redemption ─────────────────────────────────────────────
-$pointsToRedeem         = (int) ($payload['pointsToRedeem'] ?? 0);
-$pointsDiscountAmount   = 0;
+        // ── Points redemption ─────────────────────────────────────────────
+        $pointsToRedeem = (int) ($payload['pointsToRedeem'] ?? 0);
+        $pointsDiscountAmount = 0;
 
-if ($pointsToRedeem > 0 && Auth::check()) {
-    $maxAllowed     = \App\Models\RewardSetting::maxPointsPerOrder();
-    $userBalance    = \App\Models\RewardPoint::balanceFor($user->id);
-    $pointsToRedeem = min($pointsToRedeem, $maxAllowed, $userBalance);
+        if ($pointsToRedeem > 0 && Auth::check()) {
+            $maxAllowed = RewardSetting::maxPointsPerOrder();
+            $userBalance = RewardPoint::balanceFor($user->id);
+            $pointsToRedeem = min($pointsToRedeem, $maxAllowed, $userBalance);
 
-    $pointsDiscountAmount = $pointsToRedeem * \App\Models\RewardSetting::nairaPerPoint();
+            $pointsDiscountAmount = $pointsToRedeem * RewardSetting::nairaPerPoint();
 
-    $payload['pointsRedeemed']        = $pointsToRedeem;
-    $payload['pointsDiscountAmount']  = $pointsDiscountAmount;
-}
+            $payload['pointsRedeemed'] = $pointsToRedeem;
+            $payload['pointsDiscountAmount'] = $pointsDiscountAmount;
+        }
+
+        // ── Gift card redemption ──────────────────────────────────────────
+        $giftCardCode = strtoupper(trim($payload['giftCardCode'] ?? ''));
+        $giftCardDiscount = 0;
+
+        if ($giftCardCode) {
+            $validation = app(GiftCardService::class)->validate($giftCardCode);
+            if ($validation['valid']) {
+                $alreadyDiscounted = ($referralDiscountAmount + $pointsDiscountAmount);
+                $maxGiftCardDiscount = max(0, $subtotal - $alreadyDiscounted);
+                $giftCardDiscount = min((int) $validation['balance'], (int) $maxGiftCardDiscount);
+
+                $payload['giftCardCode'] = $giftCardCode;
+                $payload['giftCardDiscountAmount'] = $giftCardDiscount;
+            } else {
+                // Code became invalid between validation and submit — clear it
+                unset($payload['giftCardCode']);
+                $payload['giftCardDiscountAmount'] = 0;
+            }
+        }
 
         // Create order
         $order = $orderService->createOrder($user, $cart, $payload, (float) $subtotal);
@@ -371,8 +427,10 @@ if ($pointsToRedeem > 0 && Auth::check()) {
                 Mail::to($user->email)->queue(new AccountCreated($user, $generatedPassword));
             }
             Mail::to($order->contact_email)->queue(new OrderConfirmation($order));
-            $adminEmail = config('mail.admin_email', config('mail.from.address'));
-            Mail::to($adminEmail)->later(now()->addSeconds(30), new AdminOrderNotification($order));
+            if ((bool) AppSetting::get('notify_new_order', '1')) {
+                $adminEmail = AppSetting::get('admin_notification_email', config('mail.from.address'));
+                Mail::to($adminEmail)->later(now()->addSeconds(30), new AdminOrderNotification($order));
+            }
         } catch (\Exception $e) {
             Log::error('Order email dispatch failed', [
                 'order' => $order->order_number,

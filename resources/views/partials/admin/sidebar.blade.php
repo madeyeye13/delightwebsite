@@ -127,6 +127,7 @@
 
         {{-- Orders --}}
         <a href="{{ route('admin.orders.index') }}" title="Orders"
+           @click="$dispatch('acknowledge-orders')"
            class="nav-item group flex items-center gap-3 px-2 py-2 rounded-lg transition-all duration-150
                   {{ request()->routeIs('admin.orders.*') ? 'bg-emerald-500/10 text-emerald-400' : 'text-white/50 hover:text-white hover:bg-white/[0.05]' }}">
             <span class="flex items-center justify-center w-5 h-5 shrink-0">
@@ -140,8 +141,16 @@
                   x-transition:enter="transition ease-out duration-150 delay-75" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
                   x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
                   class="text-[13px] font-medium whitespace-nowrap flex-1" style="display:none">Orders</span>
-            <span x-show="$store.sidebar.open"
-                  class="bg-emerald-500/15 text-emerald-400 text-[10px] font-semibold px-1.5 py-0.5 rounded-md shrink-0" style="display:none">12</span>
+            {{-- Badge: red + blinking when new orders have arrived, teal otherwise --}}
+            <span
+                x-show="$store.sidebar.open && $store.navCounts.counts.orders > 0"
+                x-text="$store.navCounts.counts.orders"
+                :class="$store.navCounts.counts.orders_new > 0
+                    ? 'bg-red-500/20 text-red-400 nav-badge-blink'
+                    : 'bg-emerald-500/15 text-emerald-400'"
+                class="text-[10px] font-semibold px-1.5 py-0.5 rounded-md shrink-0"
+                style="display:none"
+            ></span>
         </a>
 
         {{-- Products --}}
@@ -157,7 +166,14 @@
             <span x-show="$store.sidebar.open"
                   x-transition:enter="transition ease-out duration-150 delay-75" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
                   x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
-                  class="text-[13px] font-medium whitespace-nowrap" style="display:none">Products</span>
+                  class="text-[13px] font-medium whitespace-nowrap flex-1" style="display:none">Products</span>
+            {{-- Badge: total product count --}}
+            <span
+                x-show="$store.sidebar.open && $store.navCounts.counts.products > 0"
+                x-text="$store.navCounts.counts.products"
+                class="bg-emerald-500/15 text-emerald-400 text-[10px] font-semibold px-1.5 py-0.5 rounded-md shrink-0"
+                style="display:none"
+            ></span>
         </a>
 
         {{-- Inventory --}}
@@ -208,6 +224,76 @@
                   x-transition:enter="transition ease-out duration-150 delay-75" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
                   x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
                   class="text-[13px] font-medium whitespace-nowrap" style="display:none">Blog</span>
+        </a>
+
+        {{-- Blog Comments --}}
+        <a href="{{ route('admin.blog.comments') }}" title="Blog Comments"
+           class="nav-item group flex items-center gap-3 px-2 py-2 rounded-lg transition-all duration-150
+                  {{ request()->routeIs('admin.blog.comments') ? 'bg-emerald-500/10 text-emerald-400' : 'text-white/50 hover:text-white hover:bg-white/[0.05]' }}">
+            <span class="relative flex items-center justify-center w-5 h-5 shrink-0">
+                <svg class="w-[15px] h-[15px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                <span x-show="$store.navCounts.counts.pending_comments > 0"
+                      x-text="$store.navCounts.counts.pending_comments"
+                      class="absolute -top-1 -right-1 min-w-[14px] h-[14px] px-0.5 rounded-full bg-amber-500 text-[9px] font-bold text-white flex items-center justify-center leading-none"></span>
+            </span>
+            <span x-show="$store.sidebar.open"
+                  x-transition:enter="transition ease-out duration-150 delay-75" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                  x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+                  class="flex items-center gap-2 text-[13px] font-medium whitespace-nowrap" style="display:none">
+                Comments
+                <span x-show="$store.navCounts.counts.pending_comments > 0"
+                      x-text="$store.navCounts.counts.pending_comments"
+                      class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-[10px] font-bold text-white leading-none"></span>
+            </span>
+        </a>
+
+        {{-- Contacts --}}
+        <a href="{{ route('admin.contacts.index') }}" title="Contact Messages"
+           class="nav-item group flex items-center gap-3 px-2 py-2 rounded-lg transition-all duration-150
+                  {{ request()->routeIs('admin.contacts.*') ? 'bg-emerald-500/10 text-emerald-400' : 'text-white/50 hover:text-white hover:bg-white/[0.05]' }}">
+            <span class="relative flex items-center justify-center w-5 h-5 shrink-0">
+                <svg class="w-[15px] h-[15px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+                <span x-show="$store.navCounts.counts.unread_contacts > 0"
+                      x-text="$store.navCounts.counts.unread_contacts"
+                      class="absolute -top-1 -right-1 min-w-[14px] h-[14px] px-0.5 rounded-full bg-red-500 text-[9px] font-bold text-white flex items-center justify-center leading-none"></span>
+            </span>
+            <span x-show="$store.sidebar.open"
+                  x-transition:enter="transition ease-out duration-150 delay-75" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                  x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+                  class="flex items-center gap-2 text-[13px] font-medium whitespace-nowrap" style="display:none">
+                Contacts
+                <span x-show="$store.navCounts.counts.unread_contacts > 0"
+                      x-text="$store.navCounts.counts.unread_contacts"
+                      class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-[10px] font-bold text-white leading-none"></span>
+            </span>
+        </a>
+
+        {{-- Newsletter --}}
+        <a href="{{ route('admin.newsletter.index') }}" title="Newsletter"
+           class="nav-item group flex items-center gap-3 px-2 py-2 rounded-lg transition-all duration-150
+                  {{ request()->routeIs('admin.newsletter.*') ? 'bg-emerald-500/10 text-emerald-400' : 'text-white/50 hover:text-white hover:bg-white/[0.05]' }}">
+            <span class="relative flex items-center justify-center w-5 h-5 shrink-0">
+                <svg class="w-[15px] h-[15px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                    <polyline points="22,6 12,13 2,6"/>
+                </svg>
+                <span x-show="$store.navCounts.counts.newsletter_new > 0"
+                      x-text="$store.navCounts.counts.newsletter_new"
+                      class="absolute -top-1 -right-1 min-w-[14px] h-[14px] px-0.5 rounded-full bg-blue-500 text-[9px] font-bold text-white flex items-center justify-center leading-none"></span>
+            </span>
+            <span x-show="$store.sidebar.open"
+                  x-transition:enter="transition ease-out duration-150 delay-75" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                  x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+                  class="flex items-center gap-2 text-[13px] font-medium whitespace-nowrap" style="display:none">
+                Newsletter
+                <span x-show="$store.navCounts.counts.newsletter_new > 0"
+                      x-text="$store.navCounts.counts.newsletter_new"
+                      class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-blue-500 text-[10px] font-bold text-white leading-none"></span>
+            </span>
         </a>
 
         {{-- Testimonials --}}
@@ -299,6 +385,23 @@
                   class="text-[13px] font-medium whitespace-nowrap" style="display:none">
                 Rewards & Referral
             </span>
+        </a>
+
+        {{-- Gift Cards --}}
+        <a href="{{ route('admin.gift-cards.index') }}" title="Gift Cards"
+           class="nav-item group flex items-center gap-3 px-2 py-2 rounded-lg transition-all duration-150
+                  {{ request()->routeIs('admin.gift-cards.*') ? 'bg-emerald-500/10 text-emerald-400' : 'text-white/50 hover:text-white hover:bg-white/[0.05]' }}">
+            <span class="flex items-center justify-center w-5 h-5 shrink-0">
+                <svg class="w-[15px] h-[15px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <rect x="2" y="7" width="20" height="14" rx="2"/>
+                    <path d="M16 7V5a2 2 0 0 0-4 0v2M8 7V5a2 2 0 0 1 4 0v2"/>
+                    <line x1="2" y1="12" x2="22" y2="12"/>
+                </svg>
+            </span>
+            <span x-show="$store.sidebar.open"
+                  x-transition:enter="transition ease-out duration-150 delay-75" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                  x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+                  class="text-[13px] font-medium whitespace-nowrap" style="display:none">Gift Cards</span>
         </a>
  
 

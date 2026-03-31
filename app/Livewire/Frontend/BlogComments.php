@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Frontend;
 
+use App\Jobs\SendCommentAwaitingApprovalEmail;
 use App\Models\BlogComment;
 use Illuminate\View\View;
 use Livewire\Component;
@@ -48,7 +49,7 @@ class BlogComments extends Component
             'body' => ['required', 'string', 'min:5', 'max:2000'],
         ]);
 
-        BlogComment::create([
+        $comment = BlogComment::create([
             'blog_post_id' => $this->postId,
             'parent_id' => $this->replyToId,
             'name' => $this->name,
@@ -57,6 +58,8 @@ class BlogComments extends Component
             'is_approved' => false,
             'is_author_reply' => false,
         ]);
+
+        SendCommentAwaitingApprovalEmail::dispatch($comment);
 
         $this->reset('body', 'replyToId', 'replyToName');
         $this->submitted = true;

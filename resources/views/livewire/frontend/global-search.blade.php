@@ -80,7 +80,7 @@
                             <p class="text-xs text-gray-400 truncate">{{ $item['label'] }}</p>
                             @endif
                         </div>
-                        <span class="text-sm font-medium text-gray-700 flex-shrink-0">{{ format_price($item['price']) }}</span>
+                        <span class="text-sm font-medium text-gray-700 flex-shrink-0">{{ $item['price'] }}</span>
                     </a>
                     @endforeach
                 </div>

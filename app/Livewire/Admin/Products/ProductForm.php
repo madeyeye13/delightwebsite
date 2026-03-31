@@ -211,6 +211,8 @@ class ProductForm extends Component
             'featured' => (bool) ($payload['featured'] ?? false),
             'is_new_arrival' => (bool) ($payload['is_new_arrival'] ?? false),
             'new_arrival_expiry' => $payload['new_arrival_expiry'] ?: null,
+            'is_gift_card' => (bool) ($payload['is_gift_card'] ?? false),
+            'allow_custom_amount' => (bool) ($payload['allow_custom_amount'] ?? false),
         ];
     }
 
@@ -449,6 +451,8 @@ class ProductForm extends Component
             'featured' => $product->featured,
             'isNewArrival' => $product->is_new_arrival,
             'newArrivalExpiry' => $product->new_arrival_expiry?->format('Y-m-d'),
+            'isGiftCard' => (bool) $product->is_gift_card,
+            'allowCustomAmount' => (bool) $product->allow_custom_amount,
         ];
 
         return json_encode($data);

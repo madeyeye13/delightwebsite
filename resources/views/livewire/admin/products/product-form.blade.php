@@ -595,12 +595,25 @@
             </div>
 
             {{-- ════════════════════════════════════════════════════════
+                 DIGITAL PRODUCT NOTICE (gift cards only)
+            ════════════════════════════════════════════════════════════ --}}
+            <div x-show="form.isGiftCard" class="bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-700 rounded-lg px-5 py-4">
+                <div class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-teal-600 dark:text-teal-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <div>
+                        <p class="text-sm font-semibold text-teal-900 dark:text-teal-200">Digital Gift Card Product</p>
+                        <p class="text-xs text-teal-800 dark:text-teal-300 mt-1">This is a digital product — no shipping, selling method, or physical configuration required. Set the denomination in the Pricing section below. Enable <strong>Allow custom amount</strong> in the sidebar to let buyers enter any value at checkout.</p>
+                    </div>
+                </div>
+            </div>
+
+            {{-- ════════════════════════════════════════════════════════
                  SELLING METHOD (COLLAPSIBLE)
                  Updated: now renders from sellingMethods array (system + custom)
                           "Add Selling Method" button opens modal
                           Custom methods show their config_type badge
             ════════════════════════════════════════════════════════════ --}}
-            <div class="bg-neutral-50 dark:bg-[#1a2332] rounded-lg border border-neutral-200 dark:border-neutral-800">
+            <div x-show="!form.isGiftCard" class="bg-neutral-50 dark:bg-[#1a2332] rounded-lg border border-neutral-200 dark:border-neutral-800">
                 <button @click="sections.sellingMethod = !sections.sellingMethod" class="w-full px-5 py-3 flex items-center justify-between hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors">
                     <div class="flex items-center gap-3">
                         <svg class="w-5 h-5 text-brand dark:text-brand-300" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/></svg>
@@ -648,7 +661,7 @@
                  This means custom selling methods work automatically
                  as long as they map to a known config_type.
             ════════════════════════════════════════════════════════════ --}}
-            <div class="bg-neutral-50 dark:bg-[#1a2332] rounded-lg border border-neutral-200 dark:border-neutral-800">
+            <div x-show="!form.isGiftCard" class="bg-neutral-50 dark:bg-[#1a2332] rounded-lg border border-neutral-200 dark:border-neutral-800">
                 <button @click="sections.unitConfig = !sections.unitConfig" class="w-full px-5 py-3 flex items-center justify-between hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors">
                     <div class="flex items-center gap-3">
                         <svg class="w-5 h-5 text-brand dark:text-brand-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3v3m-6-1v-7a2 2 0 012-2h6a2 2 0 012 2v7a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
@@ -886,7 +899,7 @@
             {{-- ════════════════════════════════════════════════════════
                  COLOR VARIANTS (COLLAPSIBLE) — unchanged structure
             ════════════════════════════════════════════════════════════ --}}
-            <div class="bg-neutral-50 dark:bg-[#1a2332] rounded-lg border border-neutral-200 dark:border-neutral-800">
+            <div x-show="!form.isGiftCard" class="bg-neutral-50 dark:bg-[#1a2332] rounded-lg border border-neutral-200 dark:border-neutral-800">
                 <button @click="sections.colorVariants = !sections.colorVariants" class="w-full px-5 py-3 flex items-center justify-between hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors">
                     <div class="flex items-center gap-3">
                         <svg class="w-5 h-5 text-brand dark:text-brand-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
@@ -1043,7 +1056,7 @@
             {{-- ════════════════════════════════════════════════════════
                  PRODUCT COMPOSITION (COLLAPSIBLE) — unchanged
             ════════════════════════════════════════════════════════════ --}}
-            <div class="bg-neutral-50 dark:bg-[#1a2332] rounded-lg border border-neutral-200 dark:border-neutral-800">
+            <div x-show="!form.isGiftCard" class="bg-neutral-50 dark:bg-[#1a2332] rounded-lg border border-neutral-200 dark:border-neutral-800">
                 <button @click="sections.composition = !sections.composition" class="w-full px-5 py-3 flex items-center justify-between hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors">
                     <div class="flex items-center gap-3">
                         <svg class="w-5 h-5 text-brand dark:text-brand-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
@@ -1086,6 +1099,9 @@
                     <svg class="w-4 h-4 text-neutral-600 dark:text-neutral-400 transition-transform" :class="sections.pricing && 'rotate-180'" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
                 </button>
                 <div x-show="sections.pricing" class="border-t border-neutral-200 dark:border-neutral-800 px-5 py-4 space-y-3">
+                    <div x-show="form.isGiftCard" class="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg text-xs text-teal-900 dark:text-teal-300">
+                        <span class="font-medium">Gift Card Denomination:</span> The price you set is the value loaded onto the gift card. If "Allow custom amount" is enabled, buyers can enter any amount at checkout instead.
+                    </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">Sale Price (₦) *</label>
@@ -1127,7 +1143,7 @@
             {{-- ════════════════════════════════════════════════════════
                  INVENTORY (COLLAPSIBLE) — unchanged
             ════════════════════════════════════════════════════════════ --}}
-            <div class="bg-neutral-50 dark:bg-[#1a2332] rounded-lg border border-neutral-200 dark:border-neutral-800">
+            <div x-show="!form.isGiftCard" class="bg-neutral-50 dark:bg-[#1a2332] rounded-lg border border-neutral-200 dark:border-neutral-800">
                 <button @click="sections.inventory = !sections.inventory" class="w-full px-5 py-3 flex items-center justify-between hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors">
                     <div class="flex items-center gap-3">
                         <svg class="w-5 h-5 text-brand dark:text-brand-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
@@ -1178,7 +1194,7 @@
             {{-- ════════════════════════════════════════════════════════
                  SHIPPING & WEIGHT (COLLAPSIBLE)
             ════════════════════════════════════════════════════════════ --}}
-            <div class="bg-neutral-50 dark:bg-[#1a2332] rounded-lg border border-neutral-200 dark:border-neutral-800">
+            <div x-show="!form.isGiftCard" class="bg-neutral-50 dark:bg-[#1a2332] rounded-lg border border-neutral-200 dark:border-neutral-800">
                 <button @click="sections.shipping = !sections.shipping" class="w-full px-5 py-3 flex items-center justify-between hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors">
                     <div class="flex items-center gap-3">
                         <svg class="w-5 h-5 text-brand dark:text-brand-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0v10a2 2 0 01-2 2H6a2 2 0 01-2-2V7m8 4v10m0-10l-8-4"/></svg>
@@ -1222,7 +1238,7 @@
             {{-- ════════════════════════════════════════════════════════
                  RECOMMENDED ADD-ONS (COLLAPSIBLE) — unchanged
             ════════════════════════════════════════════════════════════ --}}
-            <div class="bg-neutral-50 dark:bg-[#1a2332] rounded-lg border border-neutral-200 dark:border-neutral-800">
+            <div x-show="!form.isGiftCard" class="bg-neutral-50 dark:bg-[#1a2332] rounded-lg border border-neutral-200 dark:border-neutral-800">
                 <button @click="sections.addOns = !sections.addOns" class="w-full px-5 py-3 flex items-center justify-between hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors">
                     <div class="flex items-center gap-3">
                         <svg class="w-5 h-5 text-brand dark:text-brand-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
@@ -1501,6 +1517,29 @@
                             </div>
                         </template>
                     </div>
+                </div>
+
+                {{-- ── Gift Card Toggle ────────────────────────────────────── --}}
+                <div class="border-t border-neutral-200 dark:border-neutral-800 pt-2 space-y-2">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" x-model="form.isGiftCard" class="w-4 h-4 rounded">
+                        <div>
+                            <span class="text-sm text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
+                                Gift Card
+                                <span class="text-xs bg-brand-100 dark:bg-brand-500/20 text-brand-700 dark:text-brand-300 px-1.5 py-0.5 rounded font-medium">GIFT</span>
+                            </span>
+                            <p class="text-xs text-neutral-500 dark:text-neutral-400">Buyer receives a redeemable code after payment</p>
+                        </div>
+                    </label>
+                    <template x-if="form.isGiftCard">
+                        <label class="flex items-center gap-2 cursor-pointer pl-6">
+                            <input type="checkbox" x-model="form.allowCustomAmount" class="w-4 h-4 rounded">
+                            <div>
+                                <span class="text-sm text-neutral-700 dark:text-neutral-300">Allow custom amount</span>
+                                <p class="text-xs text-neutral-500 dark:text-neutral-400">Buyer types any value at checkout instead of a fixed price</p>
+                            </div>
+                        </label>
+                    </template>
                 </div>
 
                 <div class="space-y-2.5 pt-3 border-t border-neutral-200 dark:border-neutral-800">
@@ -1883,6 +1922,8 @@ function productFormManager() {
             featured: false,
             isNewArrival: false,
             newArrivalExpiry: '',
+            isGiftCard: false,
+            allowCustomAmount: false,
         },
 
         // ─────────────────────────────────────────────────────────
@@ -2567,7 +2608,7 @@ function productFormManager() {
             const errors = [];
             if (!this.form.name?.trim())                errors.push('Product name is required.');
             if (!this.form.categoryId)                  errors.push('Category is required.');
-            if (!this.form.sellingMethodId)             errors.push('Selling method is required.');
+            if (!this.form.isGiftCard && !this.form.sellingMethodId) errors.push('Selling method is required.');
             if (!this.form.price || Number(this.form.price) <= 0) errors.push('Price must be greater than 0.');
             if (!this.form.mainImagePreview && !this.form.mainImageMediaId) errors.push('A main product image is required.');
             return errors;
@@ -2718,6 +2759,8 @@ function productFormManager() {
                 featured:           this.form.featured,
                 is_new_arrival:     this.form.isNewArrival,
                 new_arrival_expiry: this.form.newArrivalExpiry || null,
+                is_gift_card:       this.form.isGiftCard,
+                allow_custom_amount: this.form.allowCustomAmount,
             };
         }
     };

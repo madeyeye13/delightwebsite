@@ -1,12 +1,17 @@
 <?php
 
 use App\Http\Controllers\PaymentCallbackController;
+use App\Http\Controllers\SitemapController;
+use App\Livewire\Dashboard\GiftCards as DashboardGiftCards;
 use App\Livewire\Dashboard\OrderDetail;
 use App\Livewire\Dashboard\Orders;
 use App\Livewire\Dashboard\Profile;
 use App\Livewire\Dashboard\ReferralRewards;
 use App\Livewire\Dashboard\Wishlist;
 use App\Models\BlogPost;
+use App\Models\GiftCard;
+use App\Models\NewsletterSubscriber;
+use App\Models\Order;
 use App\Models\Product;
 use App\Services\CurrencyService;
 use Illuminate\Http\Request;
@@ -41,11 +46,37 @@ Route::post('/currency/set', function (Request $request, CurrencyService $curren
     return response()->json(['ok' => true, 'active' => $code]);
 })->name('currency.set');
 
+// ─── Sitemap ──────────────────────────────────────────────────────────────────
+
+Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
+
 // ─── Storefront ──────────────────────────────────────────────────────────────
 
 Route::get('/shop', function () {
     return view('frontend.products.index');
 })->name('shop.index');
+
+Route::get('/faq', fn () => view('frontend.faq'))->name('faq');
+
+Route::get('/about', fn () => view('frontend.about'))->name('about');
+
+Route::get('/contact', fn () => view('frontend.contact'))->name('contact');
+
+Route::get('/unsubscribe/{token}', function (string $token) {
+    $subscriber = NewsletterSubscriber::where('token', $token)->firstOrFail();
+
+    if ($subscriber->isActive()) {
+        $subscriber->update(['unsubscribed_at' => now()]);
+    }
+
+    return view('frontend.unsubscribe-success');
+})->name('newsletter.unsubscribe');
+
+Route::get('/return-policy', fn () => view('frontend.return-policy'))->name('return-policy');
+
+Route::get('/terms', fn () => view('frontend.terms'))->name('terms');
+
+Route::get('/privacy', fn () => view('frontend.privacy'))->name('privacy');
 
 Route::get('/products/{product:slug}', function (Product $product) {
     $product->load(['category', 'sellingMethod', 'variants', 'addOns.sellingMethod', 'addOns.category']);
@@ -62,7 +93,13 @@ Route::get('/checkout', function () {
 })->name('checkout.index');
 
 Route::get('/checkout/success/{orderNumber}', function (string $orderNumber) {
-    return view('frontend.checkout.success', compact('orderNumber'));
+    $order = Order::where('order_number', $orderNumber)->first();
+    $giftCodes = $order
+        ? GiftCard::where('purchased_order_id', $order->id)
+            ->get(['code', 'initial_balance'])->toArray()
+        : [];
+
+    return view('frontend.checkout.success', compact('orderNumber', 'giftCodes'));
 })->name('checkout.success');
 
 // ─── Payment Callbacks ────────────────────────────────────────────────────────
@@ -123,9 +160,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         return view('admin.currencies.index');
     })->name('currencies.index');
 
-    Route::get('/orders', function () {
-        return view('admin.orders.index');
-    })->name('orders.index');
+    Route::get('/orders/{order}', function (Order $order) {
+        return view('admin.orders.index', ['highlightOrderId' => $order->id]);
+    })->name('orders.show');
 
     Route::get('/shipping', function () {
         return view('admin.shipping.index');
@@ -141,11 +178,18 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
     Route::get('/testimonials', fn () => view('admin.testimonials.index'))->name('testimonials.index');
 
+    Route::get('/gift-cards', fn () => view('admin.gift-cards.index'))->name('gift-cards.index');
+
     Route::get('/blog', fn () => view('admin.blog.index'))->name('blog.index');
+    Route::get('/blog/comments', fn () => view('admin.blog.comments'))->name('blog.comments');
     Route::get('/blog/create', fn () => view('admin.blog.form'))->name('blog.create');
     Route::get('/blog/{post}/edit', function (BlogPost $post) {
         return view('admin.blog.form', compact('post'));
     })->name('blog.edit');
+
+    Route::get('/contacts', fn () => view('admin.contacts.index'))->name('contacts.index');
+
+    Route::get('/newsletter', fn () => view('admin.newsletter.index'))->name('newsletter.index');
 
 });
 
@@ -161,6 +205,7 @@ Route::middleware(['auth', 'verified'])
         Route::get('/wishlist', Wishlist::class)->name('wishlist');
         Route::get('/profile', Profile::class)->name('profile');
         Route::get('/referral', ReferralRewards::class)->name('referral');
+        Route::get('/gift-cards', DashboardGiftCards::class)->name('gift-cards');
 
     });
 

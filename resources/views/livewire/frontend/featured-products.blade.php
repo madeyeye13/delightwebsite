@@ -371,7 +371,7 @@
     }
 
     window.scrollProducts = function (dir) {
-        track.scrollBy({ left: dir * cardWidth() * 2, behavior: 'smooth' });
+        track.scrollBy({ left: dir * cardWidth(), behavior: 'smooth' });
     };
 
     function onScroll() {

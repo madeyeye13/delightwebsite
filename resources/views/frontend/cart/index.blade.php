@@ -157,11 +157,29 @@
                                                   x-text="item.selected_variant ? item.selected_variant.color : ''"></span>
                                         </div>
 
-                                        {{-- Unit price --}}
-                                        <p class="font-sans text-xs text-neutral-400 dark:text-neutral-500 pt-0.5">
-                                            <span x-text="$store.currency ? $store.currency.format(item.unit_price) : '₦' + item.unit_price.toLocaleString()"></span>
-                                            &nbsp;/&nbsp;<span x-text="item.unit_label || 'unit'"></span>
-                                        </p>
+                                        {{-- Unit price / Gift card denomination --}}
+                                        <template x-if="!item.is_gift_card">
+                                            <p class="font-sans text-xs text-neutral-400 dark:text-neutral-500 pt-0.5">
+                                                <span x-text="$store.currency ? $store.currency.format(item.unit_price) : '\u20a6' + item.unit_price.toLocaleString()"></span>
+                                                &nbsp;/&nbsp;<span x-text="item.unit_label || 'unit'"></span>
+                                            </p>
+                                        </template>
+                                        <template x-if="item.is_gift_card">
+                                            <div class="flex items-center gap-1.5 pt-0.5">
+                                                <span class="font-sans text-xs text-neutral-400 dark:text-neutral-500">
+                                                    <svg class="w-3 h-3 inline-block mr-0.5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                                                    1 gift code &middot; Amount:
+                                                </span>
+                                                <div class="flex items-center border border-neutral-200 dark:border-neutral-700">
+                                                    <span class="px-1.5 text-xs text-neutral-400 dark:text-neutral-500 border-r border-neutral-200 dark:border-neutral-700 select-none">₦</span>
+                                                    <input type="number"
+                                                        :value="item.custom_price || item.unit_price"
+                                                        @change="$store.cart.updateGiftCardPrice(item.cart_line_id, $event.target.value)"
+                                                        class="w-24 py-0.5 px-1.5 font-sans text-xs font-semibold text-neutral-900 dark:text-white bg-transparent outline-none"
+                                                        min="1" step="1000">
+                                                </div>
+                                            </div>
+                                        </template>
                                     </div>
 
                                     {{-- Remove (mobile top-right) --}}
@@ -242,8 +260,18 @@
                         {{-- ── SELLING METHOD SUMMARY ───────────────────────── --}}
                         <div class="ml-0 sm:ml-[116px] bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-100 dark:border-neutral-800 px-4 py-3 space-y-2">
 
+                            {{-- Gift card info --}}
+                            <template x-if="item.is_gift_card">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="font-sans text-2xs text-neutral-500 dark:text-neutral-400">
+                                        <svg class="w-3.5 h-3.5 inline-block mr-1 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                                        Digital gift card &middot; 1 code per item &middot; Delivered by email
+                                    </span>
+                                </div>
+                            </template>
+
                             {{-- per-length --}}
-                            <template x-if="item.selling_method === 'per-length'">
+                            <template x-if="!item.is_gift_card && item.selling_method === 'per-length'">
                                 <div class="flex flex-wrap gap-x-6 gap-y-1.5">
                                     <div>
                                         <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Sold per</p>
@@ -267,7 +295,7 @@
                             </template>
 
                             {{-- per-set --}}
-                            <template x-if="item.selling_method === 'per-set'">
+                            <template x-if="!item.is_gift_card && item.selling_method === 'per-set'">
                                 <div class="space-y-2">
                                     <div class="flex flex-wrap gap-x-6 gap-y-1.5">
                                         <div>
@@ -299,7 +327,7 @@
                             </template>
 
                             {{-- per-bundle --}}
-                            <template x-if="item.selling_method === 'per-bundle'">
+                            <template x-if="!item.is_gift_card && item.selling_method === 'per-bundle'">
                                 <div class="flex flex-wrap gap-x-6 gap-y-1.5">
                                     <div>
                                         <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Sold per</p>
@@ -315,7 +343,7 @@
                             </template>
 
                             {{-- per-piece --}}
-                            <template x-if="item.selling_method === 'per-piece'">
+                            <template x-if="!item.is_gift_card && item.selling_method === 'per-piece'">
                                 <div class="flex flex-wrap gap-x-6 gap-y-1.5">
                                     <div>
                                         <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Sold per</p>
@@ -331,7 +359,7 @@
                             </template>
 
                             {{-- per-loom --}}
-                            <template x-if="item.selling_method === 'per-loom'">
+                            <template x-if="!item.is_gift_card && item.selling_method === 'per-loom'">
                                 <div class="flex flex-wrap gap-x-6 gap-y-1.5">
                                     <div>
                                         <p class="font-sans text-2xs text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Sold per</p>

@@ -33,6 +33,30 @@
 
 @section('content')
 
+
+{{-- ── Alpine store init: theme (dark mode) ───────────────────────────────── --}}
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.store('theme', {
+            dark: localStorage.getItem('theme') === 'dark'
+                || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches),
+            toggle() {
+                this.dark = !this.dark;
+                localStorage.setItem('theme', this.dark ? 'dark' : 'light');
+            }
+        });
+    });
+    // Apply dark class immediately to avoid flash of unstyled content
+    (function() {
+        var saved = localStorage.getItem('theme');
+        if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    })();
+</script>
+
     <div class="bg-neutral-50 dark:bg-brand-900 min-h-screen border-t border-neutral-200 dark:border-brand-700">
         <div class="max-w-[1200px] mx-auto px-5 sm:px-8 lg:px-16 pt-24">
 

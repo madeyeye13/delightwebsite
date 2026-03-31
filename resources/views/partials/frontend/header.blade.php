@@ -147,6 +147,21 @@
 
 
 {{-- ════════════════════════════════════════════════════════════════
+     STORE STATUS BANNER
+     Shown only when store_status is 'closed' or 'by_appointment'
+════════════════════════════════════════════════════════════════ --}}
+@php $storeStatus = \App\Models\AppSetting::get('store_status', 'open'); @endphp
+@if($storeStatus !== 'open')
+<div class="w-full bg-amber-500 text-black text-center text-xs font-semibold py-2 px-4 z-50" role="alert">
+    @if($storeStatus === 'closed')
+        <span>Our store is currently closed. We'll be back soon — thank you for your patience.</span>
+    @elseif($storeStatus === 'by_appointment')
+        <span>Currently open by appointment only — <a href="{{ route('contact') }}" class="underline underline-offset-2">contact us</a> to book.</span>
+    @endif
+</div>
+@endif
+
+{{-- ════════════════════════════════════════════════════════════════
      2. MAIN HEADER
      • Sits immediately below announcement bar (top-9)
      • Transparent by default; white bg fades in on hover OR scroll
@@ -236,18 +251,11 @@
                                 group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto group-hover:mt-0
                                 transition-all duration-300">
                         <ul class="py-2 list-none">
-                            @foreach([
-                                ['Lace Fabrics',    '/category/lace-fabrics'],
-                                ['Aso-oke',          '/category/aso-oke'],
-                                ['Ankara & Prints',  '/category/ankara'],
-                                ['Bridal Fabrics',   '/category/bridal'],
-                                ["Men's Fabrics",    '/category/mens'],
-                                ['Plain & Solid',    '/category/plain'],
-                            ] as [$label, $href])
+                            @foreach($headerCategories as $cat)
                             <li>
-                                <a href="{{ $href }}"
+                                <a href="{{ route('shop.index') }}?categories[]={{ $cat->slug }}"
                                    class="block px-5 py-2.5 text-[13px] text-gray-600 hover:text-black hover:bg-gray-50 transition-colors duration-150 whitespace-nowrap">
-                                    {{ $label }}
+                                    {{ $cat->name }}
                                 </a>
                             </li>
                             @endforeach
@@ -284,11 +292,9 @@
                                 transition-all duration-300">
                         <ul class="py-2 list-none">
                             @foreach([
-                                ['New Arrivals',       '/collection/new-arrivals'],
-                                
-                                ["Men's Collection",   '/collection/mens'],
-                                ["Women's Collection", '/collection/womens'],
-                                   
+                                ['New Arrivals',       route('shop.index').'?sort=newest'],
+                                ["Men's Collection",   route('shop.index').'?collections[]=men'],
+                                ["Women's Collection", route('shop.index').'?collections[]=women'],
                             ] as [$label, $href])
                             <li>
                                 <a href="{{ $href }}"
@@ -448,8 +454,8 @@
                                 <p class="text-sm font-medium text-black">{{ auth()->user()->name }}</p>
                             </div>
                             <div class="py-1">
-                                <a href="/my-profile" class="block px-4 py-2.5 text-[13px] text-gray-600 hover:bg-gray-50 hover:text-black transition-colors duration-150">Profile</a>
-                                <a href="/my-profile?tab=orders" class="block px-4 py-2.5 text-[13px] text-gray-600 hover:bg-gray-50 hover:text-black transition-colors duration-150">My Orders</a>
+                                <a href="{{ route('account.profile') }}" class="block px-4 py-2.5 text-[13px] text-gray-600 hover:bg-gray-50 hover:text-black transition-colors duration-150">Profile</a>
+                                <a href="{{ route('account.orders') }}" class="block px-4 py-2.5 text-[13px] text-gray-600 hover:bg-gray-50 hover:text-black transition-colors duration-150">My Orders</a>
                                 <form method="POST" action="{{ route('logout') }}">
                                     @csrf
                                     <button type="submit" class="w-full text-left px-4 py-2.5 text-[13px] text-gray-600 hover:bg-gray-50 hover:text-black transition-colors duration-150 bg-transparent border-none cursor-pointer">
@@ -651,10 +657,10 @@
                 </svg>
             </button>
             <div x-show="open" x-transition class="pb-2 pl-3">
-                @foreach(['Lace Fabrics','Aso-oke','Ankara & Prints','Bridal Fabrics',"Men's Fabrics",'Plain & Solid'] as $cat)
-                <a href="/category/{{ Str::slug($cat) }}" @click="mobileOpen = false"
+                @foreach($headerCategories as $cat)
+                <a href="{{ route('shop.index') }}?categories[]={{ $cat->slug }}" @click="mobileOpen = false"
                    class="block py-2.5 text-[13px] text-gray-600 hover:text-black border-b border-gray-50 last:border-0 transition-colors">
-                    {{ $cat }}
+                    {{ $cat->name }}
                 </a>
                 @endforeach
             </div>
@@ -670,10 +676,14 @@
                 </svg>
             </button>
             <div x-show="open" x-transition class="pb-2 pl-3">
-                @foreach(['New Arrivals','Best Sellers','Wedding Season',"Men's Collection","Women's Collection",'Sale & Clearance'] as $col)
-                <a href="/collection/{{ Str::slug($col) }}" @click="mobileOpen = false"
+                @foreach([
+                    ['New Arrivals',       route('shop.index').'?sort=newest'],
+                    ["Men's Collection",   route('shop.index').'?collections[]=men'],
+                    ["Women's Collection", route('shop.index').'?collections[]=women'],
+                ] as [$label, $href])
+                <a href="{{ $href }}" @click="mobileOpen = false"
                    class="block py-2.5 text-[13px] text-gray-600 hover:text-black border-b border-gray-50 last:border-0 transition-colors">
-                    {{ $col }}
+                    {{ $label }}
                 </a>
                 @endforeach
             </div>
@@ -746,12 +756,12 @@
                 <p class="font-sans text-base font-semibold text-black mt-0.5">{{ auth()->user()->name }}</p>
             </div>
             <nav class="space-y-0">
-                <a href="/my-profile" @click="profileOpen = false"
+                <a href="{{ route('account.profile') }}" @click="profileOpen = false"
                    class="flex items-center justify-between py-4 font-sans text-[15px] text-black border-b border-gray-100 hover:text-gray-600 transition-colors">
                     Profile
                     <svg class="w-4 h-4 text-gray-300" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="1.5"/></svg>
                 </a>
-                <a href="/my-profile?tab=orders" @click="profileOpen = false"
+                <a href="{{ route('account.orders') }}" @click="profileOpen = false"
                    class="flex items-center justify-between py-4 font-sans text-[15px] text-black border-b border-gray-100 hover:text-gray-600 transition-colors">
                     My Orders
                     <svg class="w-4 h-4 text-gray-300" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="1.5"/></svg>
