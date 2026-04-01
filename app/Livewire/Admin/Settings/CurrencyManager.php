@@ -33,6 +33,8 @@ class CurrencyManager extends Component
 
     public bool $newIsActive = true;
 
+    public string $newCountryCodes = ''; // comma-separated: US,GB or just US
+
     // ── Edit actions ──────────────────────────────────────────────────────────
 
     public function editCurrency(int $id): void
@@ -88,7 +90,15 @@ class CurrencyManager extends Component
             'newName' => ['required', 'string', 'min:2', 'max:100'],
             'newSymbol' => ['required', 'string', 'min:1', 'max:10'],
             'newMarkup' => ['required', 'numeric', 'min:0'],
+            'newCountryCodes' => ['nullable', 'string'],
         ]);
+
+        // Parse comma-separated country codes into a clean array
+        $countryCodes = collect(explode(',', $this->newCountryCodes))
+            ->map(fn ($c) => strtoupper(trim($c)))
+            ->filter()
+            ->values()
+            ->all();
 
         $currency = Currency::create([
             'code' => strtoupper($this->newCode),
@@ -97,13 +107,13 @@ class CurrencyManager extends Component
             'markup' => $this->newMarkup,
             'is_active' => $this->newIsActive,
             'is_default' => false,
+            'country_codes' => $countryCodes ?: null,  // ← add this
         ]);
 
-        // Fetch the live rate immediately so the currency is usable right away.
         app(CurrencyService::class)->updateExchangeRates();
         app(CurrencyService::class)->clearCache();
 
-        $this->reset(['newCode', 'newName', 'newSymbol', 'newMarkup']);
+        $this->reset(['newCode', 'newName', 'newSymbol', 'newMarkup', 'newCountryCodes']);
         $this->newIsActive = true;
         $this->showCreateForm = false;
 

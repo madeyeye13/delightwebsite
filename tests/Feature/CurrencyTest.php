@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\CurrencyService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -275,5 +276,63 @@ class CurrencyTest extends TestCase
             ->call('deleteCurrency', $ngn->id);
 
         $this->assertDatabaseHas('currencies', ['code' => 'NGN']);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // IP-based currency detection
+    // ────────────────────────────────────────────────────────────────────────
+
+    public function test_detect_currency_from_ip_returns_usd_for_us_ip(): void
+    {
+        Http::fake([
+            'http://ip-api.com/json/8.8.8.8' => Http::response([
+                'status' => 'success',
+                'countryCode' => 'US',
+            ], 200),
+        ]);
+
+        $service = app(CurrencyService::class);
+        $result = $service->detectCurrencyFromIP('8.8.8.8');
+
+        $this->assertEquals('USD', $result);
+    }
+
+    public function test_detect_currency_from_ip_returns_ngn_for_private_ip(): void
+    {
+        $service = app(CurrencyService::class);
+
+        $this->assertEquals('NGN', $service->detectCurrencyFromIP('127.0.0.1'));
+        $this->assertEquals('NGN', $service->detectCurrencyFromIP('192.168.1.1'));
+        $this->assertEquals('NGN', $service->detectCurrencyFromIP('10.0.0.1'));
+    }
+
+    public function test_detect_currency_from_ip_returns_ngn_when_api_fails(): void
+    {
+        Http::fake([
+            'http://ip-api.com/json/8.8.8.8' => Http::response([
+                'status' => 'fail',
+                'message' => 'quota exceeded',
+            ], 200),
+        ]);
+
+        $service = app(CurrencyService::class);
+        $result = $service->detectCurrencyFromIP('8.8.8.8');
+
+        $this->assertEquals('NGN', $result);
+    }
+
+    public function test_detect_currency_from_ip_returns_ngn_for_unknown_country(): void
+    {
+        Http::fake([
+            'http://ip-api.com/json/1.2.3.4' => Http::response([
+                'status' => 'success',
+                'countryCode' => 'JP',
+            ], 200),
+        ]);
+
+        $service = app(CurrencyService::class);
+        $result = $service->detectCurrencyFromIP('1.2.3.4');
+
+        $this->assertEquals('NGN', $result);
     }
 }

@@ -27,7 +27,7 @@
     @if($showCreateForm)
     <div class="bg-white dark:bg-[#111827] border border-neutral-200 dark:border-neutral-800 rounded-xl p-6">
         <h2 class="text-sm font-semibold text-neutral-900 dark:text-white mb-4">Add New Currency</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
                 <label class="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">ISO Code <span class="text-red-500">*</span></label>
                 <input type="text" wire:model="newCode" placeholder="e.g. KES" maxlength="6"
@@ -52,6 +52,23 @@
                        class="w-full px-3 py-2 text-sm border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-brand" />
                 @error('newMarkup') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
             </div>
+
+
+            <div class="sm:col-span-2 lg:col-span-3">
+                <label class="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+                    Country Codes
+                    <span class="text-neutral-400 dark:text-neutral-500 font-normal">(for IP auto-detection)</span>
+                </label>
+                <input type="text" wire:model="newCountryCodes"
+                    placeholder="e.g. KE  or  DE,FR,IT,ES — comma-separated ISO 3166-1 alpha-2 codes"
+                    class="w-full px-3 py-2 text-sm border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-brand uppercase" />
+                <p class="mt-1 text-xs text-neutral-400 dark:text-neutral-500">
+                    Leave empty if this currency should not be auto-detected from visitor IP.
+                </p>
+                @error('newCountryCodes') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+            </div>
+
+
         </div>
         <div class="flex items-center justify-between mt-4 pt-4 border-t border-neutral-100 dark:border-neutral-800">
             <label class="flex items-center gap-2 cursor-pointer">

@@ -303,18 +303,7 @@
                 paymentMethod:  '',
             },
 
-            countries: [
-                { code: 'NG', name: 'Nigeria',       flag: '🇳🇬' },
-                { code: 'US', name: 'United States',  flag: '🇺🇸' },
-                { code: 'GB', name: 'United Kingdom', flag: '🇬🇧' },
-                { code: 'GH', name: 'Ghana',          flag: '🇬🇭' },
-                { code: 'CA', name: 'Canada',          flag: '🇨🇦' },
-                { code: 'CM', name: 'Cameroon',        flag: '🇨🇲' },
-                { code: 'ZA', name: 'South Africa',    flag: '🇿🇦' },
-                { code: 'AU', name: 'Australia',       flag: '🇦🇺' },
-                { code: 'DE', name: 'Germany',         flag: '🇩🇪' },
-                { code: 'FR', name: 'France',          flag: '🇫🇷' },
-            ],
+            countries: @js($checkoutCountries),
 
             nigeriaStates: [
                 'Abia','Adamawa','Akwa Ibom','Anambra','Bauchi','Bayelsa','Benue','Borno',
@@ -776,14 +765,10 @@
                                     <label class="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">Phone Number <span class="text-red-500">*</span></label>
                                     <div class="flex">
                                         <select x-model="form.contact.phoneCode" class="co-field co-field-muted shrink-0"
-                                            style="width:80px;border-right:none;padding-right:24px;background-position:right 6px center">
-                                            <option value="+234">🇳🇬 +234</option>
-                                            <option value="+1">🇺🇸 +1</option>
-                                            <option value="+44">🇬🇧 +44</option>
-                                            <option value="+233">🇬🇭 +233</option>
-                                            <option value="+1-CA">🇨🇦 +1</option>
-                                            <option value="+237">🇨🇲 +237</option>
-                                            <option value="+27">🇿🇦 +27</option>
+                                            style="width:90px;border-right:none;padding-right:24px;background-position:right 6px center">
+                                            <template x-for="c in countries" :key="c.code">
+                                                <option :value="c.dial" x-text="c.flag + ' ' + c.dial"></option>
+                                            </template>
                                         </select>
                                         <input type="tel" x-model="form.contact.phone"
                                             :class="formErrors.phone ? 'border-red-400 dark:border-red-500' : ''"

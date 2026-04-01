@@ -19,7 +19,7 @@ class CurrencyService
      */
     const SUPPORTED_CURRENCIES = ['NGN', 'USD', 'GBP', 'EUR', 'GHS', 'ZAR', 'CAD'];
 
-    const IP_API_URL = 'https://ip-api.com/json';
+    const IP_API_URL = 'http://ip-api.com/json';
 
     const EXCHANGE_RATE_API_URL = 'https://api.exchangerate-api.com/v4/latest';
 
@@ -41,33 +41,57 @@ class CurrencyService
      * Detect user's currency based on IP address.
      * Falls back to NGN if detection fails.
      *
+     * @param  string|null  $ip  IP to check; defaults to the current request IP
      * @return string Currency code (NGN, USD, GBP, etc.)
      */
-    public function detectCurrencyFromIP(): string
+    public function detectCurrencyFromIP(?string $ip = null): string
     {
         try {
-            $ip = $this->getClientIP();
+            $ip = $ip ?? $this->getClientIP();
 
-            if (! $ip || $ip === '127.0.0.1') {
+            if (! $ip || filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
                 return self::BASE_CURRENCY;
             }
 
-            $cached = Cache::remember("ip_currency_{$ip}", now()->addHours(24), function () use ($ip) {
-                $response = Http::timeout(3)->get(self::IP_API_URL, ['query' => $ip]);
+            return Cache::remember("ip_currency_{$ip}", now()->addHours(24), function () use ($ip) {
+                $response = Http::timeout(3)->get(self::IP_API_URL.'/'.$ip);
 
-                if ($response->successful()) {
-                    $data = $response->json();
-                    $countryCode = $data['countryCode'] ?? null;
-
-                    if ($countryCode && isset(self::COUNTRY_TO_CURRENCY[$countryCode])) {
-                        return self::COUNTRY_TO_CURRENCY[$countryCode];
-                    }
+                if (! $response->successful()) {
+                    return self::BASE_CURRENCY;
                 }
 
-                return self::BASE_CURRENCY;
+                $data = $response->json();
+
+                if (($data['status'] ?? '') !== 'success') {
+                    return self::BASE_CURRENCY;
+                }
+
+                $countryCode = $data['countryCode'] ?? null;
+
+                if (! $countryCode) {
+                    return self::BASE_CURRENCY;
+                }
+
+                // ── Build mapping dynamically from DB ─────────────────────────
+                // Cached separately so it refreshes when admin adds currencies
+                $mapping = Cache::remember('country_to_currency_map', now()->addMinutes(self::CACHE_DURATION_MINUTES), function () {
+                    $map = [];
+                    Currency::active()
+                        ->whereNotNull('country_codes')
+                        ->get(['code', 'country_codes'])
+                        ->each(function ($currency) use (&$map) {
+                            foreach ((array) $currency->country_codes as $cc) {
+                                $map[strtoupper($cc)] = $currency->code;
+                            }
+                        });
+
+                    // Hardcoded values are the fallback — DB entries override them
+                    return array_merge(self::COUNTRY_TO_CURRENCY, $map);
+                });
+
+                return $mapping[$countryCode] ?? self::BASE_CURRENCY;
             });
 
-            return $cached;
         } catch (\Exception $e) {
             Log::warning('Currency detection from IP failed', ['error' => $e->getMessage()]);
 
@@ -87,7 +111,7 @@ class CurrencyService
             return $ip;
         }
         if ($ip = $request->header('X-Forwarded-For')) {
-            return explode(',', $ip)[0];
+            return trim(explode(',', $ip)[0]);
         }
         if ($ip = $request->header('X-Real-IP')) {
             return $ip;
@@ -97,17 +121,13 @@ class CurrencyService
     }
 
     /**
-     * Get or create user currency preference.
-     * Auto-detects from IP if user not logged in.
-     *
-     * @param  bool  $autoDetect  Whether to detect from IP if not set
-     * @return string Currency code
+     * Get or set user currency.
+     * Re-detects from IP if the client IP has changed since last detection.
      */
     public function getUserCurrency(bool $autoDetect = true): string
     {
         $user = auth()->user();
 
-        // For authenticated users, check database preference
         if ($user) {
             $pref = UserCurrencyPreference::where('user_id', $user->id)->first();
             if ($pref) {
@@ -115,16 +135,19 @@ class CurrencyService
             }
         }
 
-        // For guests, check session
+        $currentIP = $this->getClientIP();
         $sessionCurrency = session('user_currency');
-        if ($sessionCurrency) {
+        $sessionIP = session('user_currency_ip');
+
+        // Only trust the cached session value if the IP hasn't changed
+        if ($sessionCurrency && $sessionIP === $currentIP) {
             return $sessionCurrency;
         }
 
-        // Auto-detect from IP if enabled
+        // IP changed or first visit or legacy session (no IP stored) — re-detect
         if ($autoDetect) {
-            $detected = $this->detectCurrencyFromIP();
-            $this->setCurrencyInSession($detected);
+            $detected = $this->detectCurrencyFromIP($currentIP);
+            $this->setCurrencyInSession($detected, $currentIP);
 
             return $detected;
         }
@@ -175,10 +198,13 @@ class CurrencyService
     /**
      * Store currency in session for guests.
      */
-    public function setCurrencyInSession(string $currencyCode): void
+    public function setCurrencyInSession(string $currencyCode, ?string $ip = null): void
     {
         if (in_array($currencyCode, $this->getSupportedCodes())) {
-            session(['user_currency' => $currencyCode]);
+            session([
+                'user_currency' => $currencyCode,
+                'user_currency_ip' => $ip ?? $this->getClientIP(),
+            ]);
         }
     }
 
@@ -426,6 +452,7 @@ class CurrencyService
     {
         Cache::forget('currency_store_data');
         Cache::forget('currency_supported_codes');
+        Cache::forget('country_to_currency_map');  // ← add this
 
         $codes = Currency::pluck('code')->all();
         foreach ($codes as $code) {

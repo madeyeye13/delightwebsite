@@ -18,7 +18,7 @@
                 />
             </div>
 
-            <div class="flex items-center gap-3">
+            <div class="flex items-center flex-wrap gap-2 sm:gap-3">
                 {{-- Mobile filter toggle --}}
                 <button
                     @click="mobileFilters = !mobileFilters"
@@ -58,8 +58,10 @@
 
             {{-- ═══ SIDEBAR FILTERS ═══ --}}
             <aside
+                x-cloak
                 :class="mobileFilters ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
-                class="fixed lg:static inset-0 z-50 lg:z-auto w-72 lg:w-56 xl:w-64 flex-shrink-0
+                style="z-index: 1003"
+                class="fixed lg:static inset-0 lg:z-auto w-72 lg:w-56 xl:w-64 flex-shrink-0
                        bg-white dark:bg-ink lg:bg-transparent
                        overflow-y-auto lg:overflow-visible
                        transition-transform duration-300 lg:transition-none
@@ -269,8 +271,8 @@
                 x-transition:leave-start="opacity-100"
                 x-transition:leave-end="opacity-0"
                 @click="mobileFilters = false"
-                class="fixed inset-0 bg-black/40 z-40 lg:hidden"
-                style="display:none"
+                class="fixed inset-0 bg-black/40 lg:hidden"
+                style="z-index: 1002; display: none"
             ></div>
 
             {{-- ═══ PRODUCT GRID ═══ --}}
@@ -428,8 +430,8 @@
                             </div>
                             @endif
 
-                            <div class="flex items-baseline gap-2 mb-1">
-                                <span class="font-sans text-[13px] font-semibold text-gray-900 dark:text-white"
+                            <div class="flex items-baseline flex-wrap gap-x-2 gap-y-0.5 mb-1 min-w-0">
+                                <span class="font-sans text-[13px] font-semibold text-gray-900 dark:text-white min-w-0 break-all"
                                       x-text="$store.currency ? $store.currency.format({{ $finalPrice }}) : '₦{{ number_format($finalPrice) }}'">
                                 </span>
                                 @if($oldPrice)
@@ -446,7 +448,7 @@
                             @endif
 
                             {{-- Actions --}}
-                            <div class="product-actions flex items-center justify-between">
+                            <div class="product-actions flex items-center flex-wrap gap-y-1 justify-between">
 
                                 <a href="{{ route('products.show', $product->slug) }}"
                                    class="action-link font-sans text-[11px] font-medium text-gray-700 dark:text-white/60 hover:text-black dark:hover:text-white transition-colors duration-150 pb-0.5">

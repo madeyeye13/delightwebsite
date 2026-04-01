@@ -30,7 +30,7 @@ class OrderIndex extends Component
     #[Url]
     public string $paymentFilter = '';
 
-    public ?Order $viewing = null;
+    public ?int $viewingId = null;
 
     public array $selectedIds = [];
 
@@ -59,8 +59,17 @@ class OrderIndex extends Component
     public function mount(?int $highlightOrderId = null): void
     {
         if ($highlightOrderId) {
-            $this->viewing = Order::with(['items', 'user', 'dhlShipment'])->find($highlightOrderId);
+            $this->viewingId = $highlightOrderId;
         }
+    }
+
+
+    #[Computed]
+    public function viewing(): ?Order
+    {
+        return $this->viewingId
+            ? Order::with(['items', 'user', 'dhlShipment'])->find($this->viewingId)
+            : null;
     }
 
     public function updatedSearch(): void
@@ -98,12 +107,14 @@ class OrderIndex extends Component
 
     public function viewOrder(int $id): void
     {
-        $this->viewing = Order::with(['items', 'user', 'dhlShipment'])->findOrFail($id);
+        $this->viewingId = $id;
+        unset($this->viewing); // clear computed cache
     }
 
     public function closeOrder(): void
     {
-        $this->viewing = null;
+        $this->viewingId = null;
+        unset($this->viewing);
     }
 
     // ─── Status update (triggers emails) ─────────────────────────────────────
@@ -123,8 +134,8 @@ class OrderIndex extends Component
         }
 
         // Refresh open drawer
-        if ($this->viewing && $this->viewing->id === $id) {
-            $this->viewing = $order->fresh(['items', 'user', 'dhlShipment']);
+        if ($this->viewingId === $id) {
+            unset($this->viewing);
         }
     }
 
@@ -137,8 +148,9 @@ class OrderIndex extends Component
         $order->dhlShipment?->delete();
         $order->delete();
 
-        if ($this->viewing && $this->viewing->id === $id) {
-            $this->viewing = null;
+        if ($this->viewingId === $id) {
+            $this->viewingId = null;
+            unset($this->viewing);
         }
 
         $this->selectedIds = array_values(array_filter($this->selectedIds, fn ($sid) => (int) $sid !== $id));
@@ -160,8 +172,9 @@ class OrderIndex extends Component
             $order->delete();
         }
 
-        if ($this->viewing && in_array((string) $this->viewing->id, $this->selectedIds)) {
-            $this->viewing = null;
+        if ($this->viewingId && in_array((string) $this->viewingId, $this->selectedIds)) {
+            $this->viewingId = null;
+            unset($this->viewing);
         }
 
         $this->clearSelection();
@@ -250,8 +263,8 @@ class OrderIndex extends Component
         $this->shipmentPhone = '';
 
         // Refresh drawer if open
-        if ($this->viewing && $this->viewing->id === $order->id) {
-            $this->viewing = $order->fresh(['items', 'user', 'dhlShipment']);
+        if ($this->viewingId === $order->id) {
+            unset($this->viewing);
         }
 
         session()->flash('success', 'DHL shipment created. Tracking #: '.$result['tracking_number']);
@@ -318,8 +331,8 @@ class OrderIndex extends Component
         $this->cancellingOrderId = null;
         $this->cancellationReason = '';
 
-        if ($this->viewing && $this->viewing->id === $order->id) {
-            $this->viewing = $order->fresh(['items', 'user', 'dhlShipment']);
+        if ($this->viewingId === $order->id) {
+            unset($this->viewing);
         }
 
         $message = $wasPaid

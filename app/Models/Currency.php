@@ -12,6 +12,7 @@ class Currency extends Model
         'code',
         'name',
         'symbol',
+        'country_codes',  // ← add this
         'is_active',
         'is_default',
         'markup',
@@ -23,6 +24,7 @@ class Currency extends Model
             'is_active' => 'boolean',
             'is_default' => 'boolean',
             'markup' => 'decimal:4',
+            'country_codes' => 'array',   // ← add this
         ];
     }
 

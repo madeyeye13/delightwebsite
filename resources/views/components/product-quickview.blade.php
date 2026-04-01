@@ -117,6 +117,14 @@
                 added_add_ons:   []
             });
             window.dispatchEvent(new CustomEvent('toast:show', { detail: { message: this.product.name + ' added to cart', type: 'success' } }));
+        },
+        buyNow() {
+            this.addToCart();
+            Alpine.store('cart').open = false;
+            let done = false;
+            const go = () => { if (!done) { done = true; window.location.href = '/checkout'; } };
+            window.addEventListener('cart:synced', go, { once: true });
+            setTimeout(go, 500);
         }
     }"
     @open-quickview.window="open($event.detail)"
@@ -556,12 +564,12 @@
                                     <svg viewBox="0 0 24 24" fill="none" class="w-4 h-4 flex-shrink-0"><path d="M5 6.5h16l-2.024 10H7.024L5 6.5Zm0 0L4.364 3H1" stroke="currentColor" stroke-width="1.4"/><circle cx="8.5" cy="20.5" r="1" stroke="currentColor" stroke-width="1.4"/><circle cx="17.5" cy="20.5" r="1" stroke="currentColor" stroke-width="1.4"/></svg>
                                     Add to Cart
                                 </button>
-                                <a
-                                    :href="'/shop/' + (product.slug || '')"
+                                <button
+                                    @click="buyNow()"
                                     class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3.5 bg-neutral-900 dark:bg-white hover:bg-neutral-700 dark:hover:bg-neutral-100 text-white dark:text-neutral-900 font-sans text-sm font-semibold tracking-wide transition-colors duration-200"
                                 >
                                     Buy Now
-                                </a>
+                                </button>
                             </div>
                         </template>
                         <template x-if="currentStock === 0 && !isGiftCard">

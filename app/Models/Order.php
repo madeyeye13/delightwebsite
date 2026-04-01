@@ -41,6 +41,7 @@ class Order extends Model
         'total',
         'status',
         'reminder_sent_at',
+        'second_reminder_sent_at',
         'admin_notes',
         'referral_code',
         'referral_discount_amount',
@@ -57,6 +58,7 @@ class Order extends Model
             'currency_rate' => 'decimal:6',
             'paid_at' => 'datetime',
             'reminder_sent_at' => 'datetime',
+            'second_reminder_sent_at' => 'datetime',
         ];
     }
 

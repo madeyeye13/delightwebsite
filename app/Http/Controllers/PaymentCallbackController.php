@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\AdminOrderNotification;
+use App\Mail\OrderConfirmation;
+use App\Models\AppSetting;
 use App\Models\Order;
 use App\Services\FlutterwaveService;
 use App\Services\GiftCardService;
@@ -11,6 +14,7 @@ use App\Services\ReferralService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class PaymentCallbackController extends Controller
 {
@@ -45,6 +49,9 @@ class PaymentCallbackController extends Controller
 
                     // Mark order as paid
                     $this->orderService->markOrderPaid($order, $reference);
+
+                    // Send confirmation emails now that payment is verified
+                    $this->dispatchOrderConfirmationEmails($order);
 
                     // Process referral + points (only once)
                     if (! $order->referral_processed) {
@@ -103,6 +110,9 @@ class PaymentCallbackController extends Controller
                     // Mark order as paid
                     $this->orderService->markOrderPaid($order, $txRef);
 
+                    // Send confirmation emails now that payment is verified
+                    $this->dispatchOrderConfirmationEmails($order);
+
                     // Process referral + points (only once)
                     if (! $order->referral_processed) {
                         $this->referralService->processReferralForOrder($order, $request);
@@ -133,5 +143,22 @@ class PaymentCallbackController extends Controller
 
         return redirect()->route('checkout.index')
             ->with('error', 'Payment could not be verified. Please contact support.');
+    }
+
+    private function dispatchOrderConfirmationEmails(Order $order): void
+    {
+        try {
+            Mail::to($order->contact_email)->queue(new OrderConfirmation($order));
+
+            if ((bool) AppSetting::get('notify_new_order', '1')) {
+                $adminEmail = AppSetting::get('admin_notification_email', config('mail.from.address'));
+                Mail::to($adminEmail)->later(now()->addSeconds(30), new AdminOrderNotification($order));
+            }
+        } catch (\Exception $e) {
+            Log::error('Order confirmation email dispatch failed', [
+                'order' => $order->order_number,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

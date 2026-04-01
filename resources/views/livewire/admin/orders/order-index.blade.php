@@ -157,7 +157,8 @@
     ═══════════════════════════════════════════════════════════════════════ --}}
     @teleport('body')
     <div>
-    @if($viewing)
+    @if($this->viewing)
+@php $viewing = $this->viewing; @endphp
     <div class="fixed inset-0 z-50 flex items-start justify-end" aria-modal="true" wire:key="order-drawer">
         <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" wire:click="closeOrder()"></div>
         <div class="relative w-full max-w-lg h-full bg-white dark:bg-[#161920] border-l border-gray-100 dark:border-white/[0.06] overflow-y-auto shadow-2xl">
@@ -345,125 +346,129 @@
         </div>
     </div>
     @endif
-    </div>
-    @endteleport
 
-    {{-- ═══════════════════════════════════════════════════════════════════════
+      {{-- ═══════════════════════════════════════════════════════════════════════
          Create DHL Shipment Modal
-    ═══════════════════════════════════════════════════════════════════════ --}}
-    @teleport('body')
-    @if($showShipmentModal)
-    <div class="fixed inset-0 z-[60] flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" wire:click="$set('showShipmentModal', false)"></div>
-        <div class="relative bg-white dark:bg-[#1C1F27] rounded-2xl shadow-2xl w-full max-w-md border border-gray-100 dark:border-white/[0.08] p-6">
+        ═══════════════════════════════════════════════════════════════════════ --}}
+        
+        @if($showShipmentModal)
+        <div class="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" wire:click="$set('showShipmentModal', false)"></div>
+            <div class="relative bg-white dark:bg-[#1C1F27] rounded-2xl shadow-2xl w-full max-w-md border border-gray-100 dark:border-white/[0.08] p-6">
 
-            {{-- Title --}}
-            <div class="flex items-center gap-3 mb-5">
-                <div class="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-500/10 flex items-center justify-center shrink-0">
-                    <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10l2 2h10l2-2z"/></svg>
+                {{-- Title --}}
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-500/10 flex items-center justify-center shrink-0">
+                        <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10l2 2h10l2-2z"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-gray-900 dark:text-white">Create DHL Shipment</h3>
+                        <p class="text-xs text-gray-400 dark:text-white/40">This will book the shipment and generate a tracking number.</p>
+                    </div>
                 </div>
-                <div>
-                    <h3 class="font-semibold text-gray-900 dark:text-white">Create DHL Shipment</h3>
-                    <p class="text-xs text-gray-400 dark:text-white/40">This will book the shipment and generate a tracking number.</p>
+
+                {{-- Error --}}
+                @if($shipmentError)
+                <div class="mb-4 px-4 py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-400">
+                    {{ $shipmentError }}
                 </div>
-            </div>
+                @endif
 
-            {{-- Error --}}
-            @if($shipmentError)
-            <div class="mb-4 px-4 py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-400">
-                {{ $shipmentError }}
-            </div>
-            @endif
+                {{-- Phone input --}}
+                <div class="mb-5">
+                    <label class="block text-xs font-semibold text-gray-700 dark:text-white/70 mb-1.5">
+                        Receiver Phone Number <span class="text-red-500">*</span>
+                    </label>
+                    <input wire:model="shipmentPhone" type="tel" placeholder="+1234567890"
+                        class="w-full px-4 py-2.5 text-sm bg-gray-50 dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    @error('shipmentPhone')
+                        <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                    @enderror
+                    <p class="mt-1 text-[11px] text-gray-400 dark:text-white/30">Include country code, e.g. +2348012345678</p>
+                </div>
 
-            {{-- Phone input --}}
-            <div class="mb-5">
-                <label class="block text-xs font-semibold text-gray-700 dark:text-white/70 mb-1.5">
-                    Receiver Phone Number <span class="text-red-500">*</span>
-                </label>
-                <input wire:model="shipmentPhone" type="tel" placeholder="+1234567890"
-                    class="w-full px-4 py-2.5 text-sm bg-gray-50 dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                @error('shipmentPhone')
-                    <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
-                @enderror
-                <p class="mt-1 text-[11px] text-gray-400 dark:text-white/30">Include country code, e.g. +2348012345678</p>
-            </div>
-
-            {{-- Actions --}}
-            <div class="flex gap-3">
-                <button wire:click="$set('showShipmentModal', false)"
-                    class="flex-1 px-4 py-2.5 text-sm font-medium border border-gray-200 dark:border-white/[0.08] text-gray-700 dark:text-white/70 rounded-xl hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">
-                    Cancel
-                </button>
-                <button wire:click="createDhlShipment()" wire:loading.attr="disabled"
-                    class="flex-1 px-4 py-2.5 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
-                    <span wire:loading wire:target="createDhlShipment" class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                    <span>Create Shipment</span>
-                </button>
+                {{-- Actions --}}
+                <div class="flex gap-3">
+                    <button wire:click="$set('showShipmentModal', false)"
+                        class="flex-1 px-4 py-2.5 text-sm font-medium border border-gray-200 dark:border-white/[0.08] text-gray-700 dark:text-white/70 rounded-xl hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">
+                        Cancel
+                    </button>
+                    <button wire:click="createDhlShipment()" wire:loading.attr="disabled"
+                        class="flex-1 px-4 py-2.5 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
+                        <span wire:loading wire:target="createDhlShipment" class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                        <span>Create Shipment</span>
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
-    @endif
-    @endteleport
+        @endif
+        
 
-    {{-- ═══════════════════════════════════════════════════════════════════════
-         Cancel Order Modal
-    ═══════════════════════════════════════════════════════════════════════ --}}
-    @teleport('body')
-    @if($showCancelModal)
-    <div class="fixed inset-0 z-[60] flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" wire:click="$set('showCancelModal', false)"></div>
-        <div class="relative bg-white dark:bg-[#1C1F27] rounded-2xl shadow-2xl w-full max-w-md border border-gray-100 dark:border-white/[0.08] p-6">
+        {{-- ═══════════════════════════════════════════════════════════════════════
+            Cancel Order Modal
+        ═══════════════════════════════════════════════════════════════════════ --}}
+        
+        @if($showCancelModal)
+        <div class="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" wire:click="$set('showCancelModal', false)"></div>
+            <div class="relative bg-white dark:bg-[#1C1F27] rounded-2xl shadow-2xl w-full max-w-md border border-gray-100 dark:border-white/[0.08] p-6">
 
-            {{-- Title --}}
-            <div class="flex items-center gap-3 mb-5">
-                <div class="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-500/10 flex items-center justify-center shrink-0">
-                    <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                {{-- Title --}}
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-500/10 flex items-center justify-center shrink-0">
+                        <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-gray-900 dark:text-white">Cancel Order</h3>
+                        @if($cancellingOrderId && ($cancelOrder = \App\Models\Order::find($cancellingOrderId)) && $cancelOrder->isPaid())
+                            <p class="text-xs text-red-500 dark:text-red-400 font-medium">This order is paid — cancelling will trigger an automatic refund.</p>
+                        @else
+                            <p class="text-xs text-gray-400 dark:text-white/40">This action cannot be undone.</p>
+                        @endif
+                    </div>
                 </div>
-                <div>
-                    <h3 class="font-semibold text-gray-900 dark:text-white">Cancel Order</h3>
-                    @if($cancellingOrderId && ($cancelOrder = \App\Models\Order::find($cancellingOrderId)) && $cancelOrder->isPaid())
-                        <p class="text-xs text-red-500 dark:text-red-400 font-medium">This order is paid — cancelling will trigger an automatic refund.</p>
-                    @else
-                        <p class="text-xs text-gray-400 dark:text-white/40">This action cannot be undone.</p>
-                    @endif
+
+                {{-- Error --}}
+                @if($cancelError)
+                <div class="mb-4 px-4 py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-400">
+                    {{ $cancelError }}
                 </div>
-            </div>
+                @endif
 
-            {{-- Error --}}
-            @if($cancelError)
-            <div class="mb-4 px-4 py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-400">
-                {{ $cancelError }}
-            </div>
-            @endif
+                {{-- Reason input --}}
+                <div class="mb-5">
+                    <label class="block text-xs font-semibold text-gray-700 dark:text-white/70 mb-1.5">
+                        Cancellation Reason <span class="text-red-500">*</span>
+                    </label>
+                    <textarea wire:model="cancellationReason" rows="3"
+                        placeholder="e.g. Customer requested cancellation, item out of stock…"
+                        class="w-full px-4 py-2.5 text-sm bg-gray-50 dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"></textarea>
+                    @error('cancellationReason')
+                        <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                    @enderror
+                </div>
 
-            {{-- Reason input --}}
-            <div class="mb-5">
-                <label class="block text-xs font-semibold text-gray-700 dark:text-white/70 mb-1.5">
-                    Cancellation Reason <span class="text-red-500">*</span>
-                </label>
-                <textarea wire:model="cancellationReason" rows="3"
-                    placeholder="e.g. Customer requested cancellation, item out of stock…"
-                    class="w-full px-4 py-2.5 text-sm bg-gray-50 dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"></textarea>
-                @error('cancellationReason')
-                    <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
-                @enderror
-            </div>
-
-            {{-- Actions --}}
-            <div class="flex gap-3">
-                <button wire:click="$set('showCancelModal', false)"
-                    class="flex-1 px-4 py-2.5 text-sm font-medium border border-gray-200 dark:border-white/[0.08] text-gray-700 dark:text-white/70 rounded-xl hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">
-                    Go Back
-                </button>
-                <button wire:click="confirmCancelOrder()" wire:loading.attr="disabled"
-                    class="flex-1 px-4 py-2.5 text-sm font-semibold bg-red-600 hover:bg-red-700 text-white rounded-xl transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
-                    <span wire:loading wire:target="confirmCancelOrder" class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                    <span>Confirm Cancel</span>
-                </button>
+                {{-- Actions --}}
+                <div class="flex gap-3">
+                    <button wire:click="$set('showCancelModal', false)"
+                        class="flex-1 px-4 py-2.5 text-sm font-medium border border-gray-200 dark:border-white/[0.08] text-gray-700 dark:text-white/70 rounded-xl hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">
+                        Go Back
+                    </button>
+                    <button wire:click="confirmCancelOrder()" wire:loading.attr="disabled"
+                        class="flex-1 px-4 py-2.5 text-sm font-semibold bg-red-600 hover:bg-red-700 text-white rounded-xl transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
+                        <span wire:loading wire:target="confirmCancelOrder" class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                        <span>Confirm Cancel</span>
+                    </button>
+                </div>
             </div>
         </div>
+        @endif
+    
+
+
     </div>
-    @endif
     @endteleport
+
+    
 
 </div>

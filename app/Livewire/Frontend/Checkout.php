@@ -3,9 +3,6 @@
 namespace App\Livewire\Frontend;
 
 use App\Mail\AccountCreated;
-use App\Mail\AdminOrderNotification;
-use App\Mail\OrderConfirmation;
-use App\Models\AppSetting;
 use App\Models\Cart;
 use App\Models\DhlConfiguration;
 use App\Models\Order;
@@ -58,6 +55,59 @@ class Checkout extends Component
             $this->nairaPerPoint = RewardSetting::nairaPerPoint();
         }
     }
+
+
+    /**
+ * Build the country list dynamically from active currencies.
+ * Any currency added in admin with country_codes will auto-appear here.
+ */
+private function getCheckoutCountries(): array
+{
+    // Master lookup: ISO code → name, flag emoji, dial code
+    $lookup = [
+        'NG' => ['name' => 'Nigeria',        'flag' => '🇳🇬', 'dial' => '+234'],
+        'US' => ['name' => 'United States',   'flag' => '🇺🇸', 'dial' => '+1'],
+        'GB' => ['name' => 'United Kingdom',  'flag' => '🇬🇧', 'dial' => '+44'],
+        'GH' => ['name' => 'Ghana',           'flag' => '🇬🇭', 'dial' => '+233'],
+        'CA' => ['name' => 'Canada',          'flag' => '🇨🇦', 'dial' => '+1'],
+        'ZA' => ['name' => 'South Africa',    'flag' => '🇿🇦', 'dial' => '+27'],
+        'KE' => ['name' => 'Kenya',           'flag' => '🇰🇪', 'dial' => '+254'],
+        'AO' => ['name' => 'Angola',          'flag' => '🇦🇴', 'dial' => '+244'],
+        'CM' => ['name' => 'Cameroon',        'flag' => '🇨🇲', 'dial' => '+237'],
+        'AU' => ['name' => 'Australia',       'flag' => '🇦🇺', 'dial' => '+61'],
+        'DE' => ['name' => 'Germany',         'flag' => '🇩🇪', 'dial' => '+49'],
+        'FR' => ['name' => 'France',          'flag' => '🇫🇷', 'dial' => '+33'],
+        'IT' => ['name' => 'Italy',           'flag' => '🇮🇹', 'dial' => '+39'],
+        'ES' => ['name' => 'Spain',           'flag' => '🇪🇸', 'dial' => '+34'],
+        'NL' => ['name' => 'Netherlands',     'flag' => '🇳🇱', 'dial' => '+31'],
+        'BE' => ['name' => 'Belgium',         'flag' => '🇧🇪', 'dial' => '+32'],
+        'AT' => ['name' => 'Austria',         'flag' => '🇦🇹', 'dial' => '+43'],
+        'PT' => ['name' => 'Portugal',        'flag' => '🇵🇹', 'dial' => '+351'],
+        'IE' => ['name' => 'Ireland',         'flag' => '🇮🇪', 'dial' => '+353'],
+        'FI' => ['name' => 'Finland',         'flag' => '🇫🇮', 'dial' => '+358'],
+        'GR' => ['name' => 'Greece',          'flag' => '🇬🇷', 'dial' => '+30'],
+    ];
+
+    // Collect all country codes from active currencies in DB
+    $dbCodes = \App\Models\Currency::active()
+        ->whereNotNull('country_codes')
+        ->get(['country_codes'])
+        ->flatMap(fn ($c) => (array) $c->country_codes)
+        ->unique()
+        ->values()
+        ->all();
+
+    // Nigeria always first, then the rest in DB order
+    $result = [];
+    foreach (array_merge(['NG'], $dbCodes) as $code) {
+        $code = strtoupper($code);
+        if (isset($lookup[$code]) && ! in_array($code, array_column($result, 'code'))) {
+            $result[] = ['code' => $code, ...$lookup[$code]];
+        }
+    }
+
+    return $result;
+}
 
     /**
      * Called from Alpine on page load to get referral/points info.
@@ -380,13 +430,13 @@ class Checkout extends Component
     }
 
     public function render(): View
-    {
-        return view('livewire.frontend.checkout', [
-            'isGuest' => $this->isGuest,
-            'authUser' => Auth::user(),
-        ]);
-    }
-
+{
+    return view('livewire.frontend.checkout', [
+        'isGuest'           => $this->isGuest,
+        'authUser'          => Auth::user(),
+        'checkoutCountries' => $this->getCheckoutCountries(),
+    ]);
+}
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
     private function resolveCart(): ?Cart
@@ -426,11 +476,8 @@ class Checkout extends Component
             if ($isNewAccount) {
                 Mail::to($user->email)->queue(new AccountCreated($user, $generatedPassword));
             }
-            Mail::to($order->contact_email)->queue(new OrderConfirmation($order));
-            if ((bool) AppSetting::get('notify_new_order', '1')) {
-                $adminEmail = AppSetting::get('admin_notification_email', config('mail.from.address'));
-                Mail::to($adminEmail)->later(now()->addSeconds(30), new AdminOrderNotification($order));
-            }
+            // OrderConfirmation and AdminOrderNotification are dispatched in
+            // PaymentCallbackController after the gateway confirms payment.
         } catch (\Exception $e) {
             Log::error('Order email dispatch failed', [
                 'order' => $order->order_number,
