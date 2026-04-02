@@ -34,7 +34,7 @@
         <tr>
           <td style="padding:14px 18px;">
             <p style="margin:0 0 4px;font-size:10px;font-weight:700;color:#9ca3af;letter-spacing:0.12em;text-transform:uppercase;">Refund</p>
-            <p style="margin:0;font-size:13px;color:#374151;line-height:1.7;">A full refund of <strong style="color:#1F6F67;">₦{{ number_format($order->total) }}</strong> has been initiated to your original payment method. Please allow 3–7 business days depending on your bank.</p>
+            <p style="margin:0;font-size:13px;color:#374151;line-height:1.7;">A full refund of <strong style="color:#1F6F67;">{{ $order->formatPrice($order->total) }}</strong> has been initiated to your original payment method. Please allow 3–7 business days depending on your bank.</p>
           </td>
         </tr>
       </table>
@@ -66,13 +66,13 @@
             @endif
           </td>
           <td style="padding:10px 0;border-bottom:1px solid #f0f0ee;font-size:13px;color:#525252;text-align:center;">{{ $item->quantity }}</td>
-          <td style="padding:10px 0;border-bottom:1px solid #f0f0ee;font-size:13px;color:#111315;font-weight:500;text-align:right;">₦{{ number_format($item->total_price) }}</td>
+          <td style="padding:10px 0;border-bottom:1px solid #f0f0ee;font-size:13px;color:#111315;font-weight:500;text-align:right;">{{ $order->formatPrice($item->total_price) }}</td>
         </tr>
         @endforeach
         <tr>
           <td style="padding-top:12px;font-size:13px;font-weight:700;color:#111315;">Total</td>
           <td></td>
-          <td style="padding-top:12px;font-size:13px;font-weight:700;color:#111315;text-align:right;">₦{{ number_format($order->total) }}</td>
+          <td style="padding-top:12px;font-size:13px;font-weight:700;color:#111315;text-align:right;">{{ $order->formatPrice($order->total) }}</td>
         </tr>
       </table>
     </td>

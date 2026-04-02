@@ -4,6 +4,7 @@ namespace App\Livewire\Frontend;
 
 use App\Mail\AccountCreated;
 use App\Models\Cart;
+use App\Models\Currency;
 use App\Models\DhlConfiguration;
 use App\Models\Order;
 use App\Models\ProductCoupon;
@@ -56,58 +57,57 @@ class Checkout extends Component
         }
     }
 
-
     /**
- * Build the country list dynamically from active currencies.
- * Any currency added in admin with country_codes will auto-appear here.
- */
-private function getCheckoutCountries(): array
-{
-    // Master lookup: ISO code → name, flag emoji, dial code
-    $lookup = [
-        'NG' => ['name' => 'Nigeria',        'flag' => '🇳🇬', 'dial' => '+234'],
-        'US' => ['name' => 'United States',   'flag' => '🇺🇸', 'dial' => '+1'],
-        'GB' => ['name' => 'United Kingdom',  'flag' => '🇬🇧', 'dial' => '+44'],
-        'GH' => ['name' => 'Ghana',           'flag' => '🇬🇭', 'dial' => '+233'],
-        'CA' => ['name' => 'Canada',          'flag' => '🇨🇦', 'dial' => '+1'],
-        'ZA' => ['name' => 'South Africa',    'flag' => '🇿🇦', 'dial' => '+27'],
-        'KE' => ['name' => 'Kenya',           'flag' => '🇰🇪', 'dial' => '+254'],
-        'AO' => ['name' => 'Angola',          'flag' => '🇦🇴', 'dial' => '+244'],
-        'CM' => ['name' => 'Cameroon',        'flag' => '🇨🇲', 'dial' => '+237'],
-        'AU' => ['name' => 'Australia',       'flag' => '🇦🇺', 'dial' => '+61'],
-        'DE' => ['name' => 'Germany',         'flag' => '🇩🇪', 'dial' => '+49'],
-        'FR' => ['name' => 'France',          'flag' => '🇫🇷', 'dial' => '+33'],
-        'IT' => ['name' => 'Italy',           'flag' => '🇮🇹', 'dial' => '+39'],
-        'ES' => ['name' => 'Spain',           'flag' => '🇪🇸', 'dial' => '+34'],
-        'NL' => ['name' => 'Netherlands',     'flag' => '🇳🇱', 'dial' => '+31'],
-        'BE' => ['name' => 'Belgium',         'flag' => '🇧🇪', 'dial' => '+32'],
-        'AT' => ['name' => 'Austria',         'flag' => '🇦🇹', 'dial' => '+43'],
-        'PT' => ['name' => 'Portugal',        'flag' => '🇵🇹', 'dial' => '+351'],
-        'IE' => ['name' => 'Ireland',         'flag' => '🇮🇪', 'dial' => '+353'],
-        'FI' => ['name' => 'Finland',         'flag' => '🇫🇮', 'dial' => '+358'],
-        'GR' => ['name' => 'Greece',          'flag' => '🇬🇷', 'dial' => '+30'],
-    ];
+     * Build the country list dynamically from active currencies.
+     * Any currency added in admin with country_codes will auto-appear here.
+     */
+    private function getCheckoutCountries(): array
+    {
+        // Master lookup: ISO code → name, flag emoji, dial code
+        $lookup = [
+            'NG' => ['name' => 'Nigeria',        'flag' => '🇳🇬', 'dial' => '+234'],
+            'US' => ['name' => 'United States',   'flag' => '🇺🇸', 'dial' => '+1'],
+            'GB' => ['name' => 'United Kingdom',  'flag' => '🇬🇧', 'dial' => '+44'],
+            'GH' => ['name' => 'Ghana',           'flag' => '🇬🇭', 'dial' => '+233'],
+            'CA' => ['name' => 'Canada',          'flag' => '🇨🇦', 'dial' => '+1'],
+            'ZA' => ['name' => 'South Africa',    'flag' => '🇿🇦', 'dial' => '+27'],
+            'KE' => ['name' => 'Kenya',           'flag' => '🇰🇪', 'dial' => '+254'],
+            'AO' => ['name' => 'Angola',          'flag' => '🇦🇴', 'dial' => '+244'],
+            'CM' => ['name' => 'Cameroon',        'flag' => '🇨🇲', 'dial' => '+237'],
+            'AU' => ['name' => 'Australia',       'flag' => '🇦🇺', 'dial' => '+61'],
+            'DE' => ['name' => 'Germany',         'flag' => '🇩🇪', 'dial' => '+49'],
+            'FR' => ['name' => 'France',          'flag' => '🇫🇷', 'dial' => '+33'],
+            'IT' => ['name' => 'Italy',           'flag' => '🇮🇹', 'dial' => '+39'],
+            'ES' => ['name' => 'Spain',           'flag' => '🇪🇸', 'dial' => '+34'],
+            'NL' => ['name' => 'Netherlands',     'flag' => '🇳🇱', 'dial' => '+31'],
+            'BE' => ['name' => 'Belgium',         'flag' => '🇧🇪', 'dial' => '+32'],
+            'AT' => ['name' => 'Austria',         'flag' => '🇦🇹', 'dial' => '+43'],
+            'PT' => ['name' => 'Portugal',        'flag' => '🇵🇹', 'dial' => '+351'],
+            'IE' => ['name' => 'Ireland',         'flag' => '🇮🇪', 'dial' => '+353'],
+            'FI' => ['name' => 'Finland',         'flag' => '🇫🇮', 'dial' => '+358'],
+            'GR' => ['name' => 'Greece',          'flag' => '🇬🇷', 'dial' => '+30'],
+        ];
 
-    // Collect all country codes from active currencies in DB
-    $dbCodes = \App\Models\Currency::active()
-        ->whereNotNull('country_codes')
-        ->get(['country_codes'])
-        ->flatMap(fn ($c) => (array) $c->country_codes)
-        ->unique()
-        ->values()
-        ->all();
+        // Collect all country codes from active currencies in DB
+        $dbCodes = Currency::active()
+            ->whereNotNull('country_codes')
+            ->get(['country_codes'])
+            ->flatMap(fn ($c) => (array) $c->country_codes)
+            ->unique()
+            ->values()
+            ->all();
 
-    // Nigeria always first, then the rest in DB order
-    $result = [];
-    foreach (array_merge(['NG'], $dbCodes) as $code) {
-        $code = strtoupper($code);
-        if (isset($lookup[$code]) && ! in_array($code, array_column($result, 'code'))) {
-            $result[] = ['code' => $code, ...$lookup[$code]];
+        // Nigeria always first, then the rest in DB order
+        $result = [];
+        foreach (array_merge(['NG'], $dbCodes) as $code) {
+            $code = strtoupper($code);
+            if (isset($lookup[$code]) && ! in_array($code, array_column($result, 'code'))) {
+                $result[] = ['code' => $code, ...$lookup[$code]];
+            }
         }
-    }
 
-    return $result;
-}
+        return $result;
+    }
 
     /**
      * Called from Alpine on page load to get referral/points info.
@@ -178,44 +178,66 @@ private function getCheckoutCountries(): array
 
         // International: try DHL
         if ($country !== 'NG' || DhlConfiguration::get('show_for_nigeria', false)) {
-            $dhlResult = app(DHLService::class)->getRates([
-                'destination_country_code' => $country,
-                'destination_city' => $city,
-                'destination_postal_code' => $postal,
-                'weight' => $totalWeightKg,
-                'currency' => $currency,
-                'declared_value' => 100,
-            ]);
+            $dhlActive = DhlConfiguration::get('account_active', false);
 
-            if ($dhlResult['success'] ?? false) {
-                foreach ($dhlResult['products'] as $product) {
-                    $totalTransitDays = $product['total_transit_days'] ?? null;
-                    $dayLabel = $totalTransitDays ? "{$totalTransitDays} business day(s)" : '3–5 business days';
+            if (! $dhlActive) {
+                // DHL not yet activated in admin — show coming-soon placeholder.
+                // Toggle "DHL International Shipping" to Active in Admin > Shipping > DHL Settings
+                // once credentials are ready and the account is approved.
+                if ($country !== 'NG') {
                     $options[] = [
-                        'id' => 'dhl_'.$product['product_code'],
-                        'name' => 'DHL — '.$product['product_name'],
-                        'description' => "International Shipping · {$dayLabel}",
-                        'price' => (float) $product['final_price'],
-                        'badge' => null,
-                        'badgeCls' => '',
-                        'contact_required' => false,
-                        'estimated_days' => $totalTransitDays,
+                        'id' => 'dhl_coming_soon',
+                        'name' => 'DHL International Shipping — Coming Soon',
+                        'description' => "We'll confirm your shipping cost after your order is placed and reach out to you directly.",
+                        'price' => 0,
+                        'badge' => 'COMING SOON',
+                        'badgeCls' => 'text-[10px] bg-neutral-100 text-neutral-500 dark:bg-neutral-700 dark:text-neutral-400 px-1.5 py-0.5 font-semibold',
+                        'contact_required' => true,
+                        'estimated_days' => null,
                     ];
                 }
-            } elseif ($country !== 'NG') {
-                // DHL not yet configured or returned no rates — show coming-soon placeholder.
-                // Once DHL credentials are added to .env and test_mode is turned off in admin,
-                // this branch is replaced automatically by live rates above.
-                $options[] = [
-                    'id' => 'dhl_coming_soon',
-                    'name' => 'DHL International Shipping — Coming Soon',
-                    'description' => "We'll confirm your shipping cost after your order is placed and reach out to you directly.",
-                    'price' => 0,
-                    'badge' => 'COMING SOON',
-                    'badgeCls' => 'text-[10px] bg-neutral-100 text-neutral-500 dark:bg-neutral-700 dark:text-neutral-400 px-1.5 py-0.5 font-semibold',
-                    'contact_required' => true,
-                    'estimated_days' => null,
-                ];
+            } else {
+                $dhlResult = app(DHLService::class)->getRates([
+                    'destination_country_code' => $country,
+                    'destination_city' => $city,
+                    'destination_postal_code' => $postal,
+                    'weight' => $totalWeightKg,
+                    'currency' => $currency,
+                    'declared_value' => 100,
+                ]);
+
+                if ($dhlResult['success'] ?? false) {
+                    foreach ($dhlResult['products'] as $product) {
+                        $totalTransitDays = $product['total_transit_days'] ?? null;
+                        $dayLabel = $totalTransitDays ? "{$totalTransitDays} business day(s)" : '3–5 business days';
+                        $options[] = [
+                            'id' => 'dhl_'.$product['product_code'],
+                            'name' => 'DHL — '.$product['product_name'],
+                            'description' => "International Shipping · {$dayLabel}",
+                            'price' => (float) $product['final_price'],
+                            'badge' => null,
+                            'badgeCls' => '',
+                            'contact_required' => false,
+                            'estimated_days' => $totalTransitDays,
+                        ];
+                    }
+                } elseif (($dhlResult['incomplete_address'] ?? false) || ($dhlResult['not_configured'] ?? false)) {
+                    // Address not yet complete enough for a rate query — show nothing,
+                    // the frontend will re-fetch once city/postal are filled in.
+                } elseif ($country !== 'NG') {
+                    // DHL is active but the API returned no rates (misconfigured credentials,
+                    // API outage, unsupported route, etc.) — fall back to coming-soon.
+                    $options[] = [
+                        'id' => 'dhl_coming_soon',
+                        'name' => 'DHL International Shipping — Coming Soon',
+                        'description' => "We'll confirm your shipping cost after your order is placed and reach out to you directly.",
+                        'price' => 0,
+                        'badge' => 'COMING SOON',
+                        'badgeCls' => 'text-[10px] bg-neutral-100 text-neutral-500 dark:bg-neutral-700 dark:text-neutral-400 px-1.5 py-0.5 font-semibold',
+                        'contact_required' => true,
+                        'estimated_days' => null,
+                    ];
+                }
             }
         }
 
@@ -430,13 +452,13 @@ private function getCheckoutCountries(): array
     }
 
     public function render(): View
-{
-    return view('livewire.frontend.checkout', [
-        'isGuest'           => $this->isGuest,
-        'authUser'          => Auth::user(),
-        'checkoutCountries' => $this->getCheckoutCountries(),
-    ]);
-}
+    {
+        return view('livewire.frontend.checkout', [
+            'isGuest' => $this->isGuest,
+            'authUser' => Auth::user(),
+            'checkoutCountries' => $this->getCheckoutCountries(),
+        ]);
+    }
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
     private function resolveCart(): ?Cart

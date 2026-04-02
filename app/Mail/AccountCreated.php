@@ -14,25 +14,47 @@ class AccountCreated extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
+    protected ?User $userModel = null;
+
     public function __construct(
-        public readonly User $user,
+        public readonly int $userId,
         public readonly ?string $temporaryPassword = null,
     ) {}
 
+    protected function getUser(): ?User
+    {
+        return $this->userModel ??= User::find($this->userId);
+    }
+
     public function envelope(): Envelope
     {
+        $user = $this->getUser();
+
         return new Envelope(
-            subject: 'Welcome to 1st Delightsome - Your Account is Ready',
+            subject: $user
+                ? 'Welcome to 1st Delightsome - Your Account is Ready'
+                : 'Welcome to 1st Delightsome',
         );
     }
 
     public function content(): Content
     {
+        $user = $this->getUser();
+
+        if (! $user) {
+            return new Content(
+                markdown: 'emails.fallback',
+                with: [
+                    'message' => 'User account not found.',
+                ],
+            );
+        }
+
         return new Content(
             markdown: 'emails.account-created',
             with: [
-                'userName' => $this->user->name,
-                'userEmail' => $this->user->email,
+                'userName' => $user->name,
+                'userEmail' => $user->email,
                 'temporaryPassword' => $this->temporaryPassword,
                 'loginUrl' => route('login'),
             ],

@@ -24,6 +24,11 @@ class OrderDeliveredMail extends Mailable
 
     public function content(): Content
     {
+        $this->order->loadMissing([
+            'items.product.media',
+            'items.variant.media',
+        ]);
+
         return new Content(view: 'emails.orders.delivered');
     }
 }

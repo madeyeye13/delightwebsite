@@ -8,6 +8,26 @@
 
     <div class="bg-white dark:bg-[#161920] border border-gray-100 dark:border-white/[0.06] rounded-2xl divide-y divide-gray-100 dark:divide-white/[0.06]">
 
+        {{-- DHL Active Toggle --}}
+        <div class="px-5 py-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-800 dark:text-white/80">DHL International Shipping</h3>
+                    <p class="text-xs text-gray-400 dark:text-white/30 mt-0.5">
+                        When disabled, checkout shows a "Coming Soon" placeholder for international orders. Enable once your DHL account credentials are ready.
+                    </p>
+                </div>
+                <button type="button"
+                    wire:click="$set('accountActive', '{{ $accountActive === '1' ? '0' : '1' }}')"
+                    class="relative ml-6 shrink-0 inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/30 {{ $accountActive === '1' ? 'bg-emerald-500' : 'bg-gray-200 dark:bg-white/10' }}">
+                    <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform {{ $accountActive === '1' ? 'translate-x-6' : 'translate-x-1' }}"></span>
+                </button>
+                <span class="ml-3 text-sm font-medium {{ $accountActive === '1' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-white/30' }} min-w-[5.5rem]">
+                    {{ $accountActive === '1' ? 'Active' : 'Coming Soon' }}
+                </span>
+            </div>
+        </div>
+
         {{-- Mode --}}
         <div class="px-5 py-4">
             <h3 class="text-xs font-semibold text-gray-500 dark:text-white/40 uppercase tracking-wider mb-3">Mode</h3>

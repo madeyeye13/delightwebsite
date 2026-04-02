@@ -73,4 +73,14 @@ class ProductVariant extends Model implements HasMedia
 
         return $media->hasGeneratedConversion('medium') ? $media->getUrl('medium') : $media->getUrl();
     }
+
+    public function getThumbImageUrlAttribute(): ?string
+    {
+        $media = $this->getFirstMedia('variant_main');
+        if (! $media) {
+            return null;
+        }
+
+        return $media->hasGeneratedConversion('thumb') ? $media->getUrl('thumb') : $media->getUrl();
+    }
 }

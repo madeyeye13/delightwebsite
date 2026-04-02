@@ -14,20 +14,44 @@ class OrderConfirmation extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
+    protected ?Order $order = null;
+
     public function __construct(
-        public readonly Order $order,
+        public readonly int $orderId,
     ) {}
+
+    protected function getOrder(): ?Order
+    {
+        return $this->order ??= Order::with([
+            'items.product.media',
+            'items.variant.media',
+        ])->find($this->orderId);
+    }
 
     public function envelope(): Envelope
     {
+        $order = $this->getOrder();
+
         return new Envelope(
-            subject: 'Order Confirmed: '.$this->order->order_number.' - 1st Delightsome',
+            subject: $order
+                ? 'Order Confirmed: '.$order->order_number.' - 1st Delightsome'
+                : 'Order Confirmation - 1st Delightsome',
         );
     }
 
     public function content(): Content
     {
-        $order = $this->order->load('items.product');
+        $order = $this->getOrder();
+
+        if (! $order) {
+            return new Content(
+                markdown: 'emails.fallback',
+                with: [
+                    'message' => 'Order not found.',
+                ],
+            );
+        }
+
         $hasGiftCardProducts = $order->items->some(
             fn ($item) => (bool) $item->product?->is_gift_card
         );

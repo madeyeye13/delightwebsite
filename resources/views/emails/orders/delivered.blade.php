@@ -32,6 +32,7 @@
     <td style="padding:28px 40px 0;">
       <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
+          <td style="padding-bottom:10px;border-bottom:1px solid #111315;width:68px;"></td>
           <td style="padding-bottom:10px;border-bottom:1px solid #111315;">
             <span style="font-size:10px;font-weight:700;color:#9ca3af;letter-spacing:0.12em;text-transform:uppercase;">Order Summary</span>
           </td>
@@ -40,19 +41,28 @@
           </td>
         </tr>
         @foreach($order->items as $item)
+        @php $emailImg = $item->getEmailImageUrl(); @endphp
         <tr>
-          <td style="padding:10px 0;border-bottom:1px solid #f0f0ee;font-size:13px;color:#374151;">
-            {{ $item->product_name }}
-            @if($item->variant_name)
-            <span style="color:#9ca3af;"> — {{ $item->variant_name }}</span>
+          <td style="padding:8px 8px 8px 0;border-bottom:1px solid #f0f0ee;width:68px;vertical-align:middle;">
+            @if($emailImg)
+            <img src="{{ $emailImg }}" width="56" height="56" alt="" style="display:block;border-radius:4px;object-fit:cover;">
+            @else
+            <div style="width:56px;height:56px;background:#f0efed;border-radius:4px;"></div>
             @endif
           </td>
-          <td style="padding:10px 0;border-bottom:1px solid #f0f0ee;font-size:13px;color:#9ca3af;text-align:right;">×{{ $item->quantity }}</td>
+          <td style="padding:10px 0;border-bottom:1px solid #f0f0ee;font-size:13px;color:#374151;line-height:1.5;">
+            {{ $item->product_name }}
+            @if($item->variant_name)
+            <br><span style="font-size:12px;color:#9ca3af;">{{ $item->variant_name }}</span>
+            @endif
+          </td>
+          <td style="padding:10px 0;border-bottom:1px solid #f0f0ee;font-size:13px;color:#9ca3af;text-align:right;vertical-align:middle;">×{{ $item->quantity }}</td>
         </tr>
         @endforeach
         <tr>
+          <td></td>
           <td style="padding-top:12px;font-size:13px;font-weight:700;color:#111315;">Total Paid</td>
-          <td style="padding-top:12px;font-size:13px;font-weight:700;color:#111315;text-align:right;">₦{{ number_format($order->total) }}</td>
+          <td style="padding-top:12px;font-size:13px;font-weight:700;color:#111315;text-align:right;">{{ $order->formatPrice($order->total) }}</td>
         </tr>
       </table>
     </td>

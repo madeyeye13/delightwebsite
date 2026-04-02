@@ -40,7 +40,7 @@
               </tr>
               <tr>
                 <td style="font-size:14px;font-weight:700;color:#111315;font-family:monospace;">{{ $order->order_number }}</td>
-                <td style="font-size:14px;font-weight:700;color:#111315;text-align:right;">₦{{ number_format($order->total, 0) }}</td>
+                <td style="font-size:14px;font-weight:700;color:#111315;text-align:right;">{{ $order->formatPrice($order->total) }}</td>
               </tr>
             </table>
           </td>

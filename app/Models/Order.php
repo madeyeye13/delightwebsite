@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Services\CurrencyService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;   // ← add this
+use Illuminate\Database\Eloquent\Relations\HasOne;
+
+   // ← add this
 
 class Order extends Model
 {
@@ -120,6 +123,26 @@ class Order extends Model
         } while (static::where('order_number', $number)->exists());
 
         return $number;
+    }
+
+    /**
+     * Format a NGN amount in the order's display currency.
+     * All monetary columns are stored in NGN; this multiplies by the saved
+     * exchange rate and prepends the correct currency symbol.
+     */
+    public function formatPrice(int|float $amountNgn): string
+    {
+        $currency = $this->currency ?? 'NGN';
+        $rate = (float) ($this->currency_rate ?? 0);
+
+        if ($currency === 'NGN' || $rate <= 0) {
+            return '₦'.number_format((float) $amountNgn, 0);
+        }
+
+        $converted = (float) $amountNgn * $rate;
+        $symbol = app(CurrencyService::class)->getSymbol($currency);
+
+        return $symbol.number_format($converted, 2);
     }
 
     public function scopePending($query)

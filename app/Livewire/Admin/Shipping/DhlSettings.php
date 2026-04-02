@@ -9,6 +9,8 @@ use Livewire\Component;
 
 class DhlSettings extends Component
 {
+    public string $accountActive = '0';
+
     public string $testMode = '1';
 
     public string $markupPercentage = '15';
@@ -27,6 +29,7 @@ class DhlSettings extends Component
 
     public function mount(): void
     {
+        $this->accountActive = DhlConfiguration::get('account_active', false) ? '1' : '0';
         $this->testMode = DhlConfiguration::get('test_mode', true) ? '1' : '0';
         $this->markupPercentage = (string) DhlConfiguration::get('markup_percentage', 15);
         $this->maxWeightKg = (string) DhlConfiguration::get('max_weight_kg', 70);
@@ -50,6 +53,7 @@ class DhlSettings extends Component
         ]);
 
         $settings = [
+            'account_active' => $this->accountActive === '1',
             'test_mode' => $this->testMode === '1',
             'markup_percentage' => (float) $this->markupPercentage,
             'max_weight_kg' => (float) $this->maxWeightKg,
@@ -67,7 +71,10 @@ class DhlSettings extends Component
             );
         }
 
-        Cache::forget('dhl_config');
+        foreach (array_keys($settings) as $key) {
+            Cache::forget("dhl_config_{$key}");
+        }
+
         session()->flash('success', 'DHL settings saved.');
     }
 

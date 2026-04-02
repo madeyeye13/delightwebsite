@@ -615,7 +615,7 @@
             </div>
 
             {{-- Scrollable media area --}}
-            <div class="flex-1 overflow-y-auto scrollbar-none p-4 lg:p-5">
+            <div class="flex-1 overflow-y-auto scrollbar-thin p-4 lg:p-5">
 
                 {{-- Loading skeletons --}}
                 <template x-if="ui.loading">
@@ -854,6 +854,7 @@ folderDeleting: null,
     },
 
             async deleteMedia(id) {
+                if (!confirm('Are you sure you want to delete this file? This cannot be undone.')) return;
                 await this.$wire.deleteMedia(parseInt(id));
                 this.detail.item = null;
             },
@@ -873,6 +874,7 @@ folderDeleting: null,
             },
 
             async bulkDelete() {
+                if (!confirm(`Are you sure you want to delete ${this.selectedIds.length} file(s)? This cannot be undone.`)) return;
                 await this.$wire.bulkDeleteMedia(this.selectedIds.map(id => parseInt(id)));
                 this.selectedIds = [];
             },

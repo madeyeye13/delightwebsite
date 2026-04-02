@@ -16,6 +16,7 @@ class OrderService
     public function __construct(
         private readonly PaystackService $paystackService,
         private readonly FlutterwaveService $flutterwaveService,
+        private readonly CurrencyService $currencyService,
     ) {}
 
     /**
@@ -42,6 +43,16 @@ class OrderService
                 $discountAmount = round($subtotalNGN * ($coupon->discount_percent / 100), 2);
             }
         }
+
+        // Resolve display currency and rate (convert NGN amounts for email display)
+        $displayCurrency = strtoupper(trim($payload['displayCurrency'] ?? 'NGN'));
+        $supportedCodes = $this->currencyService->getSupportedCodes();
+        if (! in_array($displayCurrency, $supportedCodes)) {
+            $displayCurrency = 'NGN';
+        }
+        $currencyRate = $displayCurrency !== 'NGN'
+            ? $this->currencyService->getExchangeRate('NGN', $displayCurrency)
+            : 1.0;
 
         $shippingCost = (float) ($shipping['price'] ?? 0);
         $referralDiscount = (float) ($payload['referralDiscountAmount'] ?? 0);
@@ -78,7 +89,8 @@ class OrderService
             // Payment
             'payment_method' => $payload['paymentMethod'],
             'payment_status' => 'pending',
-            'currency' => 'NGN',
+            'currency' => $displayCurrency,
+            'currency_rate' => $currencyRate,
 
             // Totals
             'subtotal' => (int) round($subtotalNGN),

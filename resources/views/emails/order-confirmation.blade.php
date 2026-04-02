@@ -49,6 +49,7 @@
     <td style="padding:32px 40px 0;">
       <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
+          <td style="padding-bottom:10px;border-bottom:1px solid #111315;width:72px;"></td>
           <td style="padding-bottom:10px;border-bottom:1px solid #111315;">
             <span style="font-size:10px;font-weight:700;color:#9ca3af;letter-spacing:0.12em;text-transform:uppercase;">Item</span>
           </td>
@@ -60,15 +61,23 @@
           </td>
         </tr>
         @foreach ($order->items as $item)
+        @php $emailImg = $item->getEmailImageUrl(); @endphp
         <tr>
+          <td style="padding:12px 8px 12px 0;border-bottom:1px solid #e8e8e6;width:72px;vertical-align:middle;">
+            @if($emailImg)
+            <img src="{{ $emailImg }}" width="60" height="60" alt="" style="display:block;border-radius:4px;object-fit:cover;">
+            @else
+            <div style="width:60px;height:60px;background:#f0efed;border-radius:4px;"></div>
+            @endif
+          </td>
           <td style="padding:12px 0;border-bottom:1px solid #e8e8e6;font-size:13px;color:#111315;line-height:1.5;">
             {{ $item->product_name }}
             @if($item->variant_name)
             <br><span style="font-size:12px;color:#9ca3af;">{{ $item->variant_name }}</span>
             @endif
           </td>
-          <td style="padding:12px 0;border-bottom:1px solid #e8e8e6;font-size:13px;color:#525252;text-align:center;">{{ $item->quantity }}</td>
-          <td style="padding:12px 0;border-bottom:1px solid #e8e8e6;font-size:13px;color:#111315;font-weight:600;text-align:right;white-space:nowrap;">₦{{ number_format($item->total_price, 0) }}</td>
+          <td style="padding:12px 0;border-bottom:1px solid #e8e8e6;font-size:13px;color:#525252;text-align:center;vertical-align:middle;">{{ $item->quantity }}</td>
+          <td style="padding:12px 0;border-bottom:1px solid #e8e8e6;font-size:13px;color:#111315;font-weight:600;text-align:right;white-space:nowrap;vertical-align:middle;">{{ $order->formatPrice($item->total_price) }}</td>
         </tr>
         @endforeach
       </table>
@@ -80,18 +89,18 @@
     <td style="padding:0 40px 0;">
       <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
-          <td colspan="2" style="padding-top:12px;font-size:13px;color:#525252;text-align:right;">Subtotal &nbsp;&nbsp; ₦{{ number_format($order->subtotal, 0) }}</td>
+          <td colspan="2" style="padding-top:12px;font-size:13px;color:#525252;text-align:right;">Subtotal &nbsp;&nbsp; {{ $order->formatPrice($order->subtotal) }}</td>
         </tr>
         @if($order->discount_amount > 0)
         <tr>
-          <td colspan="2" style="padding-top:6px;font-size:13px;color:#D9A21B;text-align:right;">Discount &nbsp;&nbsp; −₦{{ number_format($order->discount_amount, 0) }}</td>
+          <td colspan="2" style="padding-top:6px;font-size:13px;color:#D9A21B;text-align:right;">Discount &nbsp;&nbsp; −{{ $order->formatPrice($order->discount_amount) }}</td>
         </tr>
         @endif
         @if($order->shipping_cost > 0 || !$hasGiftCardProducts)
         <tr>
           <td colspan="2" style="padding-top:6px;font-size:13px;color:#525252;text-align:right;">
             Shipping{{ $order->shipping_carrier ? ' · '.$order->shipping_carrier : '' }} &nbsp;&nbsp;
-            {{ $order->shipping_cost > 0 ? '₦'.number_format($order->shipping_cost, 0) : 'Free' }}
+            {{ $order->shipping_cost > 0 ? $order->formatPrice($order->shipping_cost) : 'Free' }}
           </td>
         </tr>
         @endif
@@ -99,7 +108,7 @@
           <td colspan="2" style="padding-top:14px;border-top:1px solid #e8e8e6;margin-top:14px;">
             <table width="100%" cellpadding="0" cellspacing="0"><tr>
               <td style="font-size:14px;font-weight:700;color:#111315;padding-top:12px;">Total Paid</td>
-              <td style="font-size:14px;font-weight:700;color:#111315;text-align:right;padding-top:12px;">₦{{ number_format($order->total, 0) }}</td>
+              <td style="font-size:14px;font-weight:700;color:#111315;text-align:right;padding-top:12px;">{{ $order->formatPrice($order->total) }}</td>
             </tr></table>
           </td>
         </tr>

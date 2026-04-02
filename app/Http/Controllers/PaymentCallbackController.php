@@ -148,11 +148,11 @@ class PaymentCallbackController extends Controller
     private function dispatchOrderConfirmationEmails(Order $order): void
     {
         try {
-            Mail::to($order->contact_email)->queue(new OrderConfirmation($order));
+            Mail::to($order->contact_email)->queue(new OrderConfirmation($order->id));
 
             if ((bool) AppSetting::get('notify_new_order', '1')) {
                 $adminEmail = AppSetting::get('admin_notification_email', config('mail.from.address'));
-                Mail::to($adminEmail)->later(now()->addSeconds(30), new AdminOrderNotification($order));
+                Mail::to($adminEmail)->later(now()->addSeconds(30), new AdminOrderNotification($order->id));
             }
         } catch (\Exception $e) {
             Log::error('Order confirmation email dispatch failed', [

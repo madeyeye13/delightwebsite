@@ -40,7 +40,7 @@
         </tr>
         <tr>
           <td style="padding:10px 0;border-bottom:1px solid #e8e8e6;font-size:10px;font-weight:700;color:#9ca3af;letter-spacing:0.12em;text-transform:uppercase;">Order Total</td>
-          <td style="padding:10px 0;border-bottom:1px solid #e8e8e6;font-size:13px;color:#111315;font-weight:600;text-align:right;">₦{{ number_format($order->total) }}</td>
+          <td style="padding:10px 0;border-bottom:1px solid #e8e8e6;font-size:13px;color:#111315;font-weight:600;text-align:right;">{{ $order->formatPrice($order->total) }}</td>
         </tr>
         <tr>
           <td style="padding:10px 0;border-bottom:1px solid #e8e8e6;font-size:10px;font-weight:700;color:#9ca3af;letter-spacing:0.12em;text-transform:uppercase;">Payment</td>

@@ -503,13 +503,14 @@
 
                 try {
                     const result = await this.$wire.placeOrder({
-                        contact:        this.form.contact,
-                        address:        this.form.address,
-                        shippingMethod: this.selectedShipping || { id: this.form.shippingMethod, price: this.shippingCost(), estimated_days: null },
-                        paymentMethod:  this.form.paymentMethod,
-                        promoCode:      this.promoApplied ? this.promoCode : null,
-                        pointsToRedeem: this.pointsToRedeem,
-                        giftCardCode:   this.giftCardApplied ? this.giftCardCode : '',
+                        contact:         this.form.contact,
+                        address:         this.form.address,
+                        shippingMethod:  this.selectedShipping || { id: this.form.shippingMethod, price: this.shippingCost(), estimated_days: null },
+                        paymentMethod:   this.form.paymentMethod,
+                        promoCode:       this.promoApplied ? this.promoCode : null,
+                        pointsToRedeem:  this.pointsToRedeem,
+                        giftCardCode:    this.giftCardApplied ? this.giftCardCode : '',
+                        displayCurrency: Alpine.store('currency').active,
                     });
 
                     if (result && result.success) {
@@ -536,6 +537,9 @@
                     return;
                 }
                 item.qty = Math.min(item.qty + (item.quantityStep || 1), item.stockQuantity || 999);
+                this._syncItemQtyToStore(item);
+                Livewire.dispatch('cart:update-qty', { productId: item.id, variantId: item.variant?.id ?? null, quantity: item.qty });
+                this._debouncedShipping();
             },
             decQty(item) {
                 if (item.is_gift_card) {
@@ -546,7 +550,24 @@
                     return;
                 }
                 const min = item.minQuantity || 1, step = item.quantityStep || 1;
-                if (item.qty - step >= min) item.qty -= step;
+                if (item.qty - step >= min) {
+                    item.qty -= step;
+                    this._syncItemQtyToStore(item);
+                    Livewire.dispatch('cart:update-qty', { productId: item.id, variantId: item.variant?.id ?? null, quantity: item.qty });
+                    this._debouncedShipping();
+                }
+            },
+            _syncItemQtyToStore(item) {
+                const storeCart = Alpine.store('cart');
+                if (!storeCart || !item.cart_line_id) return;
+                const storeItem = storeCart.items.find(i => i.cart_line_id === item.cart_line_id);
+                if (storeItem) storeItem.quantity = item.qty;
+            },
+            _debouncedShipping() {
+                clearTimeout(this._shippingTimer);
+                this._shippingTimer = setTimeout(() => {
+                    if (this.form.address.country) this.fetchShippingOptions();
+                }, 700);
             },
             removeItem(item) {
                 if (item.is_gift_card && item.cart_line_id) {

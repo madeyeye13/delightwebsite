@@ -24,6 +24,12 @@ class OrderShippedMail extends Mailable
 
     public function content(): Content
     {
+        $this->order->loadMissing([
+            'items.product.media',
+            'items.variant.media',
+            'dhlShipment',
+        ]);
+
         return new Content(view: 'emails.orders.shipped');
     }
 }

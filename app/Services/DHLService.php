@@ -50,6 +50,10 @@ class DHLService
                 return ['success' => false, 'error' => 'Invalid destination country code.'];
             }
 
+            if (empty(trim($params['destination_city'] ?? ''))) {
+                return ['success' => false, 'incomplete_address' => true, 'error' => 'City is required for DHL rate lookup.'];
+            }
+
             if ($params['weight'] < 0.5) {
                 $params['weight'] = 0.5;
             }
@@ -151,8 +155,8 @@ class DHLService
             $postalCode = null;
         }
 
-        $pickupDate = $this->nextBusinessDay(now()->addDays(3));
-        $plannedShippingDate = $pickupDate->setTime(10, 0, 0)->format('Y-m-d\TH:i:s\G\M\TP');
+        $pickupDate = $this->nextBusinessDay(now()->addDays(1));
+        $plannedShippingDate = $pickupDate->setTime(10, 0, 0)->format('Y-m-d\TH:i:s \G\M\TP');
 
         $receiverDetails = [
             'cityName' => $params['destination_city'] ?? '',
@@ -164,7 +168,6 @@ class DHLService
 
         return [
             'plannedShippingDateAndTime' => $plannedShippingDate,
-            'productCode' => 'P',
             'accounts' => [['typeCode' => 'shipper', 'number' => $this->accountNumber]],
             'customerDetails' => [
                 'shipperDetails' => [
@@ -403,16 +406,52 @@ class DHLService
     {
         $date = $date->copy();
         $added = 0;
-        while ($added < $daysToAdd || $date->isWeekend()) {
-            if (! $date->isWeekend()) {
+        while ($added < $daysToAdd || $date->isWeekend() || $this->isDhlHoliday($date)) {
+            if (! $date->isWeekend() && ! $this->isDhlHoliday($date)) {
                 $added++;
             }
-            if ($added < $daysToAdd || $date->isWeekend()) {
+            if ($added < $daysToAdd || $date->isWeekend() || $this->isDhlHoliday($date)) {
                 $date->addDay();
             }
         }
 
         return $date;
+    }
+
+    /**
+     * Returns true if DHL is closed on the given date (public holidays).
+     * Covers Good Friday, Easter Monday, Christmas, New Year, and major public holidays
+     * for the foreseeable future.
+     */
+    private function isDhlHoliday(Carbon $date): bool
+    {
+        $year = (int) $date->format('Y');
+        $mmdd = $date->format('m-d');
+
+        // Fixed-date holidays
+        $fixed = [
+            '01-01', // New Year's Day
+            '12-25', // Christmas Day
+            '12-26', // Boxing Day
+        ];
+
+        if (in_array($mmdd, $fixed, true)) {
+            return true;
+        }
+
+        // Easter-based holidays (computed per year)
+        // easter_days() returns the number of days after March 21 — no Unix timestamp,
+        // no timezone confusion, works on all platforms.
+        $easter = Carbon::createMidnightDate($year, 3, 21)->addDays(easter_days($year));
+        $goodFriday = $easter->copy()->subDays(2);
+        $easterMonday = $easter->copy()->addDay();
+
+        $easterHolidays = [
+            $goodFriday->format('m-d'),
+            $easterMonday->format('m-d'),
+        ];
+
+        return in_array($mmdd, $easterHolidays, true);
     }
 
     public function getMarkupPercentage(): float

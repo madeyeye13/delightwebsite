@@ -45,4 +45,24 @@ class OrderItem extends Model
     {
         return $this->belongsTo(ProductVariant::class, 'variant_id');
     }
+
+    /**
+     * Best thumbnail URL for this item in emails.
+     * Prefers variant-specific image, falls back to product main image.
+     */
+    public function getEmailImageUrl(): ?string
+    {
+        if ($this->relationLoaded('variant') && $this->variant) {
+            $url = $this->variant->thumb_image_url;
+            if ($url) {
+                return $url;
+            }
+        }
+
+        if ($this->relationLoaded('product') && $this->product) {
+            return $this->product->thumb_image_url;
+        }
+
+        return null;
+    }
 }
